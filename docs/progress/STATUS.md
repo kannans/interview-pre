@@ -1,0 +1,87 @@
+# Interview Preparation Coach — Build Status
+
+**Last updated:** 2026-06-30  
+**Core loop:** profile → diagnosis → plan → practice → evaluate → progress → adjust
+
+## Summary
+
+Planning and database schema are complete. The Go backend foundation is running with Profile, Baseline Diagnosis, and Recovery Plan APIs. Diagnosis and plan generation use placeholder/static logic (no OpenAI yet). Frontend, AI, remaining backend modules, tests, and deployment are not started.
+
+## Phase checklist
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 1 | Freeze MVP scope | Done |
+| 2 | Technical architecture | Done |
+| 3 | Folder structure | Partial — backend + `db/` exist; no `frontend/`, `deploy/`, or AI prompts folder |
+| 4 | PostgreSQL schema & migrations | Done |
+| 5 | Go backend foundation | Done |
+| 6 | Backend product modules | Partial (3/7) |
+| 7 | AI prompt layer + OpenAI | Not started |
+| 8 | Next.js frontend | Not started |
+| 9 | End-to-end recovery loop | Not started |
+| 10 | Testing & review | Not started |
+| 11 | EC2 / Docker deployment | Not started |
+| 12 | 30-day personal validation plan | Not started |
+
+## Done
+
+- [x] MVP scope, PRD, technical design, build plan (`docs/`)
+- [x] PostgreSQL initial migration — 8 tables (`db/migrations/000001_init_schema.up.sql`)
+- [x] Go backend: config, Chi router, pgx pool, slog, health, CORS, graceful shutdown
+- [x] Profile API: `POST` / `GET` `/api/v1/profile`
+- [x] Diagnosis API: `POST` / `GET` `/api/v1/diagnosis` (placeholder AI report)
+- [x] Recovery plan API: `POST` / `GET` `/api/v1/plan`, `GET` `/api/v1/plan/today`, `PATCH` `/api/v1/plan/tasks/{id}/complete` (static plan from `weak_areas_self`)
+
+## Backend modules (Phase 6)
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| Profile | Done | Single-user upsert/get |
+| Baseline diagnosis | Done | Saves answers; placeholder `diagnostic_report` JSON |
+| Recovery plan | Done | Static 7–10 tasks; replaces existing active plan on regenerate |
+| Practice questions | Not started | Table exists; no queries, seed data, or API |
+| Practice attempts | Not started | Table exists; no API |
+| Evaluations | Not started | Table exists; no API |
+| Progress snapshots | Not started | Table exists; no API |
+
+## API surface today
+
+| Method | Path | Status |
+|--------|------|--------|
+| GET | `/health` | Working |
+| POST | `/api/v1/profile` | Working |
+| GET | `/api/v1/profile` | Working |
+| POST | `/api/v1/diagnosis` | Working (no real AI) |
+| GET | `/api/v1/diagnosis` | Working |
+| POST | `/api/v1/plan` | Working (static generation) |
+| GET | `/api/v1/plan` | Working |
+| GET | `/api/v1/plan/today` | Working |
+| PATCH | `/api/v1/plan/tasks/{id}/complete` | Working |
+
+## Not started
+
+- [ ] Practice questions + seed data
+- [ ] Practice attempts + evaluations
+- [ ] Progress snapshots
+- [ ] AI prompt layer + OpenAI integration (`backend/internal/ai/`)
+- [ ] Next.js frontend (onboarding, diagnosis, plan, practice, mock interview, progress, settings)
+- [ ] End-to-end workflow integration
+- [ ] Tests (`*_test.go`, migration smoke tests, AI parsing tests)
+- [ ] Deployment (Dockerfiles, docker-compose, EC2)
+
+## Blockers
+
+- **OpenAI not wired** — blocks real diagnosis, plan generation, and attempt evaluations
+- **No frontend** — blocks personal daily use
+- **No seed questions** — blocks practice flow
+
+## Repo layout notes
+
+- `db/` — migrations, sqlc config, and SQL queries (source of truth)
+- `backend/internal/db/` — generated sqlc code + pgx connection pool
+- `docs/progress/` — build status and next-step prompts
+
+## Recommended next step
+
+Implement the **practice questions** backend module. See [NEXT.md](./NEXT.md) for the copy-paste prompt.
