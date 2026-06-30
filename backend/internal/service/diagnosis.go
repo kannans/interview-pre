@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/repository"
 )
+
+var ErrAIFailed = errors.New("ai service failed")
 
 // DiagnosisInput holds the three answer types from the baseline assessment.
 type DiagnosisInput struct {
@@ -31,7 +34,6 @@ func (i DiagnosisInput) Validate() error {
 }
 
 // DiagnosisService orchestrates baseline diagnosis creation and retrieval.
-// In Phase 7, this service will also trigger AI evaluation.
 type DiagnosisService interface {
 	Submit(ctx context.Context, input DiagnosisInput) (db.BaselineDiagnosis, error)
 	Get(ctx context.Context) (db.BaselineDiagnosis, error)
@@ -40,12 +42,14 @@ type DiagnosisService interface {
 type diagnosisService struct {
 	profileRepo   repository.ProfileRepository
 	diagnosisRepo repository.DiagnosisRepository
+	aiService     ai.Service
 }
 
-func NewDiagnosisService(profileRepo repository.ProfileRepository, diagnosisRepo repository.DiagnosisRepository) DiagnosisService {
+func NewDiagnosisService(profileRepo repository.ProfileRepository, diagnosisRepo repository.DiagnosisRepository, aiService ai.Service) DiagnosisService {
 	return &diagnosisService{
 		profileRepo:   profileRepo,
 		diagnosisRepo: diagnosisRepo,
+		aiService:     aiService,
 	}
 }
 
@@ -54,20 +58,24 @@ func (s *diagnosisService) Submit(ctx context.Context, input DiagnosisInput) (db
 		return db.BaselineDiagnosis{}, fmt.Errorf("validation error: %w", err)
 	}
 
-	// A profile must exist before a diagnosis can be submitted
 	profile, err := s.profileRepo.Get(ctx)
 	if err != nil {
 		return db.BaselineDiagnosis{}, fmt.Errorf("profile not found — create a profile first: %w", err)
 	}
 
-	// Placeholder diagnostic report: in Phase 7 this will be replaced with an OpenAI call
-	placeholderReport := map[string]interface{}{
-		"status":  "pending_ai_evaluation",
-		"message": "AI evaluation will be triggered in Phase 7",
-	}
-	reportJSON, err := json.Marshal(placeholderReport)
+	result, err := s.aiService.EvaluateBaselineDiagnosis(ctx, ai.BaselineDiagnosisInput{
+		Profile:          profileToAIContext(profile),
+		CodingAnswer:     input.CodingAnswer,
+		ConceptualAnswer: input.ConceptualAnswer,
+		BehavioralAnswer: input.BehavioralAnswer,
+	})
 	if err != nil {
-		return db.BaselineDiagnosis{}, fmt.Errorf("failed to marshal report: %w", err)
+		return db.BaselineDiagnosis{}, fmt.Errorf("%w: %v", ErrAIFailed, err)
+	}
+
+	reportJSON, err := json.Marshal(result.Data)
+	if err != nil {
+		return db.BaselineDiagnosis{}, fmt.Errorf("failed to marshal diagnostic report: %w", err)
 	}
 
 	diagnosis, err := s.diagnosisRepo.Create(ctx, profile.ID, input.CodingAnswer, input.ConceptualAnswer, input.BehavioralAnswer, reportJSON)
@@ -85,4 +93,14 @@ func (s *diagnosisService) Get(ctx context.Context) (db.BaselineDiagnosis, error
 	}
 
 	return s.diagnosisRepo.Get(ctx, profile.ID)
+}
+
+func profileToAIContext(profile db.Profile) ai.ProfileContext {
+	return ai.ProfileContext{
+		ExperienceYears: profile.ExperienceYears,
+		TargetRole:      profile.TargetRole,
+		TargetCompanies: profile.TargetCompanies,
+		WeakAreasSelf:   profile.WeakAreasSelf,
+		Timeline:        profile.Timeline,
+	}
 }

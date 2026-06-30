@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/repository"
 )
@@ -20,7 +20,6 @@ var (
 )
 
 // EvaluationService orchestrates attempt scoring and feedback retrieval.
-// In Phase 7, Evaluate will trigger a real OpenAI call.
 type EvaluationService interface {
 	Evaluate(ctx context.Context, attemptID pgtype.UUID) (db.Evaluation, error)
 	GetByAttemptID(ctx context.Context, attemptID pgtype.UUID) (db.Evaluation, error)
@@ -31,6 +30,7 @@ type evaluationService struct {
 	attemptRepo    repository.AttemptRepository
 	questionRepo   repository.QuestionRepository
 	evaluationRepo repository.EvaluationRepository
+	aiService      ai.Service
 }
 
 func NewEvaluationService(
@@ -38,12 +38,14 @@ func NewEvaluationService(
 	attemptRepo repository.AttemptRepository,
 	questionRepo repository.QuestionRepository,
 	evaluationRepo repository.EvaluationRepository,
+	aiService ai.Service,
 ) EvaluationService {
 	return &evaluationService{
 		profileRepo:    profileRepo,
 		attemptRepo:    attemptRepo,
 		questionRepo:   questionRepo,
 		evaluationRepo: evaluationRepo,
+		aiService:      aiService,
 	}
 }
 
@@ -73,18 +75,62 @@ func (s *evaluationService) Evaluate(ctx context.Context, attemptID pgtype.UUID)
 		return db.Evaluation{}, fmt.Errorf("failed to get question: %w", err)
 	}
 
-	scores, feedback, rawAIResponse := derivePlaceholderEvaluation(attempt, question)
+	profile, err := s.profileRepo.Get(ctx)
+	if err != nil {
+		return db.Evaluation{}, fmt.Errorf("failed to get profile: %w", err)
+	}
+
+	evalInput := ai.EvaluationInput{
+		Profile:          profileToAIContext(profile),
+		QuestionType:     question.Type,
+		QuestionCategory: question.Category,
+		QuestionLevel:    question.Level,
+		QuestionTitle:    question.Title,
+		QuestionContent:  question.Content,
+		SubmittedContent: attempt.SubmittedContent,
+		TimeTakenSeconds: attempt.TimeTakenSeconds,
+	}
+	if question.Constraints.Valid {
+		evalInput.Constraints = question.Constraints.String
+	}
+	if question.StarterCode.Valid {
+		evalInput.StarterCode = question.StarterCode.String
+	}
+	if question.SolutionHint.Valid {
+		evalInput.SolutionHint = question.SolutionHint.String
+	}
+
+	result, err := s.aiService.EvaluateAttempt(ctx, question.Type, evalInput)
+	if err != nil {
+		return db.Evaluation{}, fmt.Errorf("%w: %v", ErrAIFailed, err)
+	}
+
+	out := result.Data
+	rawAIResponse, err := json.Marshal(map[string]any{
+		"evaluation":     out,
+		"prompt_version": out.PromptVersion,
+		"model":          out.Model,
+		"usage": map[string]int{
+			"input_tokens":  result.Meta.InputTokens,
+			"output_tokens": result.Meta.OutputTokens,
+			"total_tokens":  result.Meta.TotalTokens,
+		},
+		"response_id": result.Meta.ResponseID,
+	})
+	if err != nil {
+		return db.Evaluation{}, fmt.Errorf("failed to marshal raw ai response: %w", err)
+	}
 
 	params := db.CreateEvaluationParams{
 		AttemptID:             attemptID,
-		ScoreCorrectness:      scores.correctness,
-		ScoreApproach:         scores.approach,
-		ScoreEdgeCases:        scores.edgeCases,
-		ScoreCommunication:    scores.communication,
-		FeedbackCorrectness:   feedback.correctness,
-		FeedbackApproach:      feedback.approach,
-		FeedbackEdgeCases:     feedback.edgeCases,
-		FeedbackCommunication: feedback.communication,
+		ScoreCorrectness:      int32(out.ScoreCorrectness),
+		ScoreApproach:         int32(out.ScoreApproach),
+		ScoreEdgeCases:        int32(out.ScoreEdgeCases),
+		ScoreCommunication:    int32(out.ScoreCommunication),
+		FeedbackCorrectness:   out.FeedbackCorrectness,
+		FeedbackApproach:      out.FeedbackApproach,
+		FeedbackEdgeCases:     out.FeedbackEdgeCases,
+		FeedbackCommunication: out.FeedbackCommunication,
 		RawAiResponse:         rawAIResponse,
 	}
 
@@ -138,131 +184,4 @@ func (s *evaluationService) loadOwnedAttempt(ctx context.Context, attemptID pgty
 	}
 
 	return attempt, nil
-}
-
-type placeholderScores struct {
-	correctness   int32
-	approach      int32
-	edgeCases     int32
-	communication int32
-}
-
-type placeholderFeedback struct {
-	correctness   string
-	approach      string
-	edgeCases     string
-	communication string
-}
-
-func derivePlaceholderEvaluation(attempt db.Attempt, question db.Question) (placeholderScores, placeholderFeedback, json.RawMessage) {
-	contentLen := len(strings.TrimSpace(attempt.SubmittedContent))
-	timeTaken := attempt.TimeTakenSeconds
-
-	correctness := clampScore(int32(4 + contentLen/200))
-	approach := scoreFromTimeTaken(timeTaken)
-	edgeCases := clampScore(int32(3 + contentLen/400))
-	communication := clampScore(int32(4 + strings.Count(attempt.SubmittedContent, "\n")))
-
-	feedback := placeholderFeedback{
-		correctness: fmt.Sprintf(
-			"Placeholder: review your solution against the %s question \"%s\". Submission length suggests %s detail.",
-			question.Type,
-			question.Title,
-			detailLevel(contentLen),
-		),
-		approach: fmt.Sprintf(
-			"Placeholder: you spent %d seconds. %s",
-			timeTaken,
-			timeTakenFeedback(timeTaken),
-		),
-		edgeCases: fmt.Sprintf(
-			"Placeholder: explicitly test empty input, boundary values, and invalid cases for \"%s\".",
-			question.Title,
-		),
-		communication: fmt.Sprintf(
-			"Placeholder: structure your explanation with problem restatement, approach, complexity, and trade-offs for %s questions.",
-			question.Category,
-		),
-	}
-
-	rawPayload := map[string]interface{}{
-		"status":              "pending_ai_evaluation",
-		"message":             "Real AI evaluation will be triggered in Phase 7",
-		"placeholder":         true,
-		"attempt_id":          uuidString(attempt.ID),
-		"question_id":         uuidString(question.ID),
-		"question_type":       question.Type,
-		"time_taken_seconds":  timeTaken,
-		"submission_length":   contentLen,
-		"scores_placeholder":  map[string]int32{"correctness": correctness, "approach": approach, "edge_cases": edgeCases, "communication": communication},
-	}
-	rawAIResponse, _ := json.Marshal(rawPayload)
-
-	return placeholderScores{
-		correctness:   correctness,
-		approach:      approach,
-		edgeCases:     edgeCases,
-		communication: communication,
-	}, feedback, rawAIResponse
-}
-
-func clampScore(score int32) int32 {
-	if score < 0 {
-		return 0
-	}
-	if score > 10 {
-		return 10
-	}
-	return score
-}
-
-func scoreFromTimeTaken(seconds int32) int32 {
-	switch {
-	case seconds < 60:
-		return 4
-	case seconds <= 900:
-		return 7
-	case seconds <= 1800:
-		return 8
-	default:
-		return 6
-	}
-}
-
-func detailLevel(contentLen int) string {
-	switch {
-	case contentLen < 100:
-		return "minimal"
-	case contentLen < 500:
-		return "moderate"
-	default:
-		return "strong"
-	}
-}
-
-func timeTakenFeedback(seconds int32) string {
-	switch {
-	case seconds < 60:
-		return "Consider spending more time outlining your approach before coding."
-	case seconds <= 900:
-		return "Time usage looks reasonable for a focused practice session."
-	case seconds <= 1800:
-		return "Good depth; watch for diminishing returns on very long sessions."
-	default:
-		return "Session ran long — practice articulating a concise plan upfront."
-	}
-}
-
-func uuidString(id pgtype.UUID) string {
-	if !id.Valid {
-		return ""
-	}
-	return fmt.Sprintf(
-		"%x-%x-%x-%x-%x",
-		id.Bytes[0:4],
-		id.Bytes[4:6],
-		id.Bytes[6:8],
-		id.Bytes[8:10],
-		id.Bytes[10:16],
-	)
 }

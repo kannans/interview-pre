@@ -3,12 +3,13 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/repository"
 )
@@ -46,17 +47,20 @@ type planService struct {
 	profileRepo   repository.ProfileRepository
 	diagnosisRepo repository.DiagnosisRepository
 	planRepo      repository.PlanRepository
+	aiService     ai.Service
 }
 
 func NewPlanService(
 	profileRepo repository.ProfileRepository,
 	diagnosisRepo repository.DiagnosisRepository,
 	planRepo repository.PlanRepository,
+	aiService ai.Service,
 ) PlanService {
 	return &planService{
 		profileRepo:   profileRepo,
 		diagnosisRepo: diagnosisRepo,
 		planRepo:      planRepo,
+		aiService:     aiService,
 	}
 }
 
@@ -69,7 +73,7 @@ func (s *planService) Generate(ctx context.Context) (PlanWithTasks, error) {
 		return PlanWithTasks{}, fmt.Errorf("failed to get profile: %w", err)
 	}
 
-	_, err = s.diagnosisRepo.Get(ctx, profile.ID)
+	diagnosis, err := s.diagnosisRepo.Get(ctx, profile.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return PlanWithTasks{}, ErrDiagnosisMissing
@@ -77,7 +81,24 @@ func (s *planService) Generate(ctx context.Context) (PlanWithTasks, error) {
 		return PlanWithTasks{}, fmt.Errorf("failed to get diagnosis: %w", err)
 	}
 
-	tasks := derivePlanTasks(profile.WeakAreasSelf)
+	result, err := s.aiService.GenerateRecoveryPlan(ctx, ai.RecoveryPlanInput{
+		Profile:          profileToAIContext(profile),
+		DiagnosticReport: json.RawMessage(diagnosis.DiagnosticReport),
+	})
+	if err != nil {
+		return PlanWithTasks{}, fmt.Errorf("%w: %v", ErrAIFailed, err)
+	}
+
+	tasks := make([]repository.PlanTaskInput, len(result.Data.Tasks))
+	for i, t := range result.Data.Tasks {
+		tasks[i] = repository.PlanTaskInput{
+			Category:      t.Category,
+			Level:         t.Level,
+			Title:         t.Title,
+			SequenceOrder: int32(i + 1),
+		}
+	}
+
 	plan, createdTasks, err := s.planRepo.ReplacePlanWithTasks(ctx, profile.ID, tasks)
 	if err != nil {
 		return PlanWithTasks{}, fmt.Errorf("failed to generate recovery plan: %w", err)
@@ -166,79 +187,4 @@ func (s *planService) CompleteTask(ctx context.Context, taskID pgtype.UUID) (db.
 	}
 
 	return completed, nil
-}
-
-type taskTemplate struct {
-	Category string
-	Level    string
-	Title    string
-}
-
-// derivePlanTasks builds a static 5–10 task plan from self-identified weak areas.
-// Phase 7 will replace this with AI-driven plan generation from diagnostic_report.
-func derivePlanTasks(weakAreasSelf string) []repository.PlanTaskInput {
-	weak := strings.ToLower(weakAreasSelf)
-
-	emphasizeDSA := containsAny(weak, "dsa", "algorithm", "leetcode", "array", "tree", "graph", "dynamic programming", "dp")
-	emphasizeBasics := containsAny(weak, "syntax", "fundamental", "basic", "javascript", "python", "go", "typescript", "language")
-	emphasizeConcept := containsAny(weak, "system design", "concept", "api", "http", "database", "sql", "oop", "async")
-
-	templates := []taskTemplate{
-		{Category: "programming_basics", Level: "level_1", Title: "Review core data types, variables, and control flow"},
-		{Category: "programming_basics", Level: "level_2", Title: "Practice writing clean functions with clear error handling"},
-		{Category: "dsa", Level: "level_1", Title: "Arrays and string manipulation fundamentals"},
-		{Category: "dsa", Level: "level_2", Title: "Hash maps and two-pointer techniques"},
-		{Category: "concept", Level: "level_1", Title: "Explain time and space complexity for common operations"},
-		{Category: "concept", Level: "level_2", Title: "REST APIs, HTTP methods, and status codes"},
-		{Category: "dsa", Level: "level_3", Title: "Binary search, sorting, and recursion review"},
-	}
-
-	if emphasizeDSA {
-		templates = append(templates,
-			taskTemplate{Category: "dsa", Level: "level_2", Title: "Practice sliding window and prefix sum patterns"},
-			taskTemplate{Category: "dsa", Level: "level_3", Title: "Tree traversal: BFS and DFS fundamentals"},
-		)
-	}
-	if emphasizeBasics {
-		templates = append(templates,
-			taskTemplate{Category: "programming_basics", Level: "level_2", Title: "Refactor a small function for readability and edge cases"},
-			taskTemplate{Category: "programming_basics", Level: "level_3", Title: "Debug a function with off-by-one and null/empty input bugs"},
-		)
-	}
-	if emphasizeConcept {
-		templates = append(templates,
-			taskTemplate{Category: "concept", Level: "level_2", Title: "Compare SQL vs NoSQL trade-offs for a simple product"},
-			taskTemplate{Category: "concept", Level: "level_3", Title: "Sketch a high-level design for a URL shortener"},
-		)
-	}
-	if !emphasizeDSA && !emphasizeBasics && !emphasizeConcept {
-		templates = append(templates,
-			taskTemplate{Category: "concept", Level: "level_1", Title: "Walk through how you would debug a production issue step by step"},
-		)
-	}
-
-	// Cap at 10 tasks for v1 static plans.
-	if len(templates) > 10 {
-		templates = templates[:10]
-	}
-
-	result := make([]repository.PlanTaskInput, len(templates))
-	for i, t := range templates {
-		result[i] = repository.PlanTaskInput{
-			Category:      t.Category,
-			Level:         t.Level,
-			Title:         t.Title,
-			SequenceOrder: int32(i + 1),
-		}
-	}
-	return result
-}
-
-func containsAny(s string, keywords ...string) bool {
-	for _, kw := range keywords {
-		if strings.Contains(s, kw) {
-			return true
-		}
-	}
-	return false
 }

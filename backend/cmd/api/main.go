@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kannans/interview-prep/backend/internal/config"
+	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	internalHttp "github.com/kannans/interview-prep/backend/internal/http"
 )
@@ -43,8 +44,19 @@ func main() {
 	}
 	defer dbPool.Close()
 
+	promptRegistry, err := ai.NewRegistry()
+	if err != nil {
+		slog.Error("Failed to load AI prompts", "error", err)
+		os.Exit(1)
+	}
+	openaiClient := ai.NewClient(ai.ClientConfig{
+		APIKey: cfg.OpenAIAPIKey,
+		Model:  cfg.OpenAIModel,
+	})
+	aiService := ai.NewService(openaiClient, promptRegistry)
+
 	// 3. Set up HTTP router & server
-	router := internalHttp.NewRouter(dbPool)
+	router := internalHttp.NewRouter(dbPool, aiService)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

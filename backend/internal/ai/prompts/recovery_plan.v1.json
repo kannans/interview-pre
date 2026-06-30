@@ -1,0 +1,65 @@
+{
+  "version": "v1",
+  "id": "recovery_plan",
+  "schema_name": "recovery_plan",
+  "model": "gpt-4o-mini",
+  "temperature": 0.4,
+  "max_output_tokens": 2048,
+  "system_instruction": "You are a senior engineering interview coach creating a personalized recovery plan. Generate 5-10 sequenced daily practice tasks based on the diagnostic report and profile. Each task must use category programming_basics, dsa, or concept; level level_1, level_2, or level_3. Titles must be specific and actionable (not vague like 'practice arrays'). Order tasks from foundational to advanced. Match intensity to the candidate's timeline. Output only valid JSON.",
+  "user_input_shape": {
+    "profile": {
+      "experience_years": "integer",
+      "target_role": "string",
+      "target_companies": "string",
+      "weak_areas_self": "string",
+      "timeline": "string"
+    },
+    "diagnostic_report": "object — full baseline diagnosis JSON including weak_areas and priority_focus"
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "tasks": {
+        "type": "array",
+        "minItems": 5,
+        "maxItems": 10,
+        "items": {
+          "type": "object",
+          "properties": {
+            "category": { "type": "string", "enum": ["programming_basics", "dsa", "concept"] },
+            "level": { "type": "string", "enum": ["level_1", "level_2", "level_3"] },
+            "title": { "type": "string" },
+            "rationale": { "type": "string" }
+          },
+          "required": ["category", "level", "title", "rationale"],
+          "additionalProperties": false
+        }
+      },
+      "plan_summary": { "type": "string" }
+    },
+    "required": ["tasks", "plan_summary"],
+    "additionalProperties": false
+  },
+  "example_input": {
+    "profile": {
+      "experience_years": 8,
+      "target_role": "Senior Backend Engineer",
+      "target_companies": "Google",
+      "weak_areas_self": "DSA",
+      "timeline": "60 days"
+    },
+    "diagnostic_report": {
+      "weak_areas": ["hash map edge cases", "timed system design"],
+      "priority_focus": ["two-pointer patterns"],
+      "recommended_start_level": "level_2"
+    }
+  },
+  "example_output": {
+    "tasks": [
+      { "category": "programming_basics", "level": "level_2", "title": "Refactor a function to handle nil and empty inputs explicitly", "rationale": "Stabilize fundamentals before harder DSA" },
+      { "category": "dsa", "level": "level_2", "title": "Solve 3 two-pointer problems with duplicate constraints", "rationale": "Addresses hash map / pointer weak area" },
+      { "category": "concept", "level": "level_2", "title": "Sketch URL shortener in 15 minutes with cache and DB trade-offs", "rationale": "Build timed design muscle" }
+    ],
+    "plan_summary": "Two-week ramp: tighten coding hygiene, then targeted DSA patterns and timed design reps aligned to diagnostic gaps."
+  }
+}

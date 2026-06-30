@@ -128,6 +128,10 @@ func writePlanError(w http.ResponseWriter, err error) bool {
 		w.WriteHeader(http.StatusConflict)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return true
+	case isAIError(err):
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "ai service unavailable — try again later"})
+		return true
 	default:
 		return false
 	}

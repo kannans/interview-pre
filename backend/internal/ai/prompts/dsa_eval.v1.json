@@ -1,0 +1,59 @@
+{
+  "version": "v1",
+  "id": "dsa_eval",
+  "schema_name": "practice_evaluation",
+  "model": "gpt-4o-mini",
+  "temperature": 0.2,
+  "max_output_tokens": 1536,
+  "system_instruction": "You are a senior engineer grading a DSA practice attempt for interview prep. Evaluate algorithm correctness, approach quality, edge-case coverage, and how well the candidate would communicate complexity and trade-offs in an interview. Scores are 0-10. Feedback must reference the actual solution attempt. Call out missing complexity analysis or pattern misapplication explicitly. Output only valid JSON.",
+  "user_input_shape": {
+    "profile": { "experience_years": "integer", "target_role": "string" },
+    "question_type": "dsa",
+    "question_category": "string — e.g. arrays, trees",
+    "question_level": "level_1 | level_2 | level_3",
+    "question_title": "string",
+    "question_content": "string",
+    "constraints": "string optional",
+    "starter_code": "string optional",
+    "solution_hint": "string optional — for grader context only, do not reveal to candidate in feedback",
+    "submitted_content": "string",
+    "time_taken_seconds": "integer"
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "score_correctness": { "type": "integer", "minimum": 0, "maximum": 10 },
+      "score_approach": { "type": "integer", "minimum": 0, "maximum": 10 },
+      "score_edge_cases": { "type": "integer", "minimum": 0, "maximum": 10 },
+      "score_communication": { "type": "integer", "minimum": 0, "maximum": 10 },
+      "feedback_correctness": { "type": "string" },
+      "feedback_approach": { "type": "string" },
+      "feedback_edge_cases": { "type": "string" },
+      "feedback_communication": { "type": "string" },
+      "next_action": { "type": "string" }
+    },
+    "required": ["score_correctness", "score_approach", "score_edge_cases", "score_communication", "feedback_correctness", "feedback_approach", "feedback_edge_cases", "feedback_communication", "next_action"],
+    "additionalProperties": false
+  },
+  "example_input": {
+    "profile": { "experience_years": 8, "target_role": "Senior Engineer", "target_companies": "Google", "weak_areas_self": "DSA", "timeline": "60 days" },
+    "question_type": "dsa",
+    "question_category": "arrays",
+    "question_level": "level_1",
+    "question_title": "Find maximum in an array",
+    "question_content": "Return the largest value in a non-empty integer array.",
+    "submitted_content": "function findMax(nums){ let m=nums[0]; for(let i=1;i<nums.length;i++) if(nums[i]>m) m=nums[i]; return m; }",
+    "time_taken_seconds": 300
+  },
+  "example_output": {
+    "score_correctness": 10,
+    "score_approach": 9,
+    "score_edge_cases": 8,
+    "score_communication": 5,
+    "feedback_correctness": "Single-pass max scan is correct for non-empty input per constraints.",
+    "feedback_approach": "O(n) time, O(1) space — optimal for this problem.",
+    "feedback_edge_cases": "Works for negatives; constraints guarantee non-empty array.",
+    "feedback_communication": "State time/space complexity aloud in interviews even for easy problems.",
+    "next_action": "Re-solve verbally: restate problem, confirm constraints, then code while narrating complexity."
+  }
+}

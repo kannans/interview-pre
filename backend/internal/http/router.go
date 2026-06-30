@@ -8,21 +8,22 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/http/handler"
 	"github.com/kannans/interview-prep/backend/internal/repository"
 	"github.com/kannans/interview-prep/backend/internal/service"
 )
 
-func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
+func NewRouter(dbPool *pgxpool.Pool, aiService ai.Service) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global Middlewares
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger) // Simple logger; can be replaced with structured logs later
+	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(middleware.Timeout(120 * time.Second))
 
 	// CORS Setup
 	r.Use(cors.Handler(cors.Options{
@@ -31,52 +32,42 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not exceeded
+		MaxAge:           300,
 	}))
 
-	// Initializing handlers
 	healthHandler := handler.NewHealthHandler(dbPool)
 
-	// Wire up Profile module
 	queries := db.New(dbPool)
 	profileRepo := repository.NewProfileRepository(queries)
 	profileSvc := service.NewProfileService(profileRepo)
 	profileHandler := handler.NewProfileHandler(profileSvc)
 
-	// Wire up Diagnosis module
 	diagnosisRepo := repository.NewDiagnosisRepository(queries)
-	diagnosisSvc := service.NewDiagnosisService(profileRepo, diagnosisRepo)
+	diagnosisSvc := service.NewDiagnosisService(profileRepo, diagnosisRepo, aiService)
 	diagnosisHandler := handler.NewDiagnosisHandler(diagnosisSvc)
 
-	// Wire up Recovery Plan module
 	planRepo := repository.NewPlanRepository(dbPool, queries)
-	planSvc := service.NewPlanService(profileRepo, diagnosisRepo, planRepo)
+	planSvc := service.NewPlanService(profileRepo, diagnosisRepo, planRepo, aiService)
 	planHandler := handler.NewPlanHandler(planSvc)
 
-	// Wire up Practice Questions module
 	questionRepo := repository.NewQuestionRepository(queries)
 	questionSvc := service.NewQuestionService(questionRepo)
 	questionHandler := handler.NewQuestionHandler(questionSvc)
 
-	// Wire up Practice Attempts module
 	attemptRepo := repository.NewAttemptRepository(queries)
 	attemptSvc := service.NewAttemptService(profileRepo, questionRepo, attemptRepo)
 	attemptHandler := handler.NewAttemptHandler(attemptSvc)
 
-	// Wire up Evaluations module
 	evaluationRepo := repository.NewEvaluationRepository(queries)
-	evaluationSvc := service.NewEvaluationService(profileRepo, attemptRepo, questionRepo, evaluationRepo)
+	evaluationSvc := service.NewEvaluationService(profileRepo, attemptRepo, questionRepo, evaluationRepo, aiService)
 	evaluationHandler := handler.NewEvaluationHandler(evaluationSvc)
 
-	// Wire up Progress Snapshots module
 	progressRepo := repository.NewProgressRepository(queries)
-	progressSvc := service.NewProgressService(profileRepo, planRepo, progressRepo)
+	progressSvc := service.NewProgressService(profileRepo, planRepo, progressRepo, aiService)
 	progressHandler := handler.NewProgressHandler(progressSvc)
 
-	// Health Route
 	r.Get("/health", healthHandler.Check)
 
-	// API v1 Routes
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/profile", profileHandler.Upsert)
 		r.Get("/profile", profileHandler.Get)
@@ -103,7 +94,6 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 		r.Get("/progress/snapshots", progressHandler.ListSnapshots)
 	})
 
-	// Fallback Route for undefined paths
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)

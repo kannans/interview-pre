@@ -1,0 +1,73 @@
+{
+  "version": "v1",
+  "id": "baseline_diagnosis",
+  "schema_name": "diagnostic_report",
+  "model": "gpt-4o-mini",
+  "temperature": 0.3,
+  "max_output_tokens": 2048,
+  "system_instruction": "You are a senior engineering interview coach evaluating a baseline assessment for an experienced engineer preparing for technical interviews. Be direct, specific, and practical — avoid generic encouragement. Score honestly against FAANG-style bar expectations adjusted for the candidate's experience level and timeline. Identify concrete weak areas with actionable priority focus. Output only valid JSON matching the schema.",
+  "user_input_shape": {
+    "profile": {
+      "experience_years": "integer",
+      "target_role": "string",
+      "target_companies": "string",
+      "weak_areas_self": "string",
+      "timeline": "string"
+    },
+    "coding_answer": "string — candidate's coding solution or approach",
+    "conceptual_answer": "string — answer to a system design / CS concept question",
+    "behavioral_answer": "string — answer to a behavioral interview question"
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "overall_readiness": { "type": "integer", "minimum": 0, "maximum": 100 },
+      "dimension_scores": {
+        "type": "object",
+        "properties": {
+          "programming_basics": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "dsa": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "system_design_concepts": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "communication": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "behavioral": { "type": "integer", "minimum": 0, "maximum": 10 }
+        },
+        "required": ["programming_basics", "dsa", "system_design_concepts", "communication", "behavioral"],
+        "additionalProperties": false
+      },
+      "weak_areas": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+      "strengths": { "type": "array", "items": { "type": "string" } },
+      "recommended_start_level": { "type": "string", "enum": ["level_1", "level_2", "level_3"] },
+      "summary": { "type": "string" },
+      "priority_focus": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 5 }
+    },
+    "required": ["overall_readiness", "dimension_scores", "weak_areas", "strengths", "recommended_start_level", "summary", "priority_focus"],
+    "additionalProperties": false
+  },
+  "example_input": {
+    "profile": {
+      "experience_years": 8,
+      "target_role": "Senior Backend Engineer",
+      "target_companies": "Google, Stripe",
+      "weak_areas_self": "DSA, system design under pressure",
+      "timeline": "60 days"
+    },
+    "coding_answer": "Used a hash map to track complements, O(n) time. Missed duplicate handling.",
+    "conceptual_answer": "Described load balancer and cache but skipped consistency trade-offs.",
+    "behavioral_answer": "STAR story about production incident; light on measurable impact."
+  },
+  "example_output": {
+    "overall_readiness": 58,
+    "dimension_scores": {
+      "programming_basics": 7,
+      "dsa": 5,
+      "system_design_concepts": 6,
+      "communication": 6,
+      "behavioral": 7
+    },
+    "weak_areas": ["hash map edge cases", "system design depth under time pressure", "quantifying behavioral impact"],
+    "strengths": ["clear coding instinct", "structured incident narrative"],
+    "recommended_start_level": "level_2",
+    "summary": "Solid engineering foundation but interview execution gaps in DSA edge cases and concise system design. Focus next 2 weeks on pattern drills plus timed design sketches.",
+    "priority_focus": ["two-pointer and hash map variants", "15-minute system design outlines", "behavioral answers with metrics"]
+  }
+}

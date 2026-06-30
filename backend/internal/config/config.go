@@ -13,6 +13,7 @@ type Config struct {
 	Env          string
 	DatabaseURL  string
 	OpenAIAPIKey string
+	OpenAIModel  string
 }
 
 func Load() (*Config, error) {
@@ -37,9 +38,13 @@ func Load() (*Config, error) {
 	}
 
 	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
-	// For MVP, we can warn if API Key is missing, but not fail immediately if developer just wants health check.
 	if openaiAPIKey == "" {
 		slog.Warn("OPENAI_API_KEY is not set. AI features will fail.")
+	}
+
+	openaiModel := os.Getenv("OPENAI_MODEL")
+	if openaiModel == "" {
+		openaiModel = "gpt-4o-mini"
 	}
 
 	return &Config{
@@ -47,5 +52,6 @@ func Load() (*Config, error) {
 		Env:          env,
 		DatabaseURL:  databaseURL,
 		OpenAIAPIKey: openaiAPIKey,
+		OpenAIModel:  openaiModel,
 	}, nil
 }

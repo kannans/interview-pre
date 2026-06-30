@@ -1,84 +1,89 @@
 # Next Implementation Step
 
-**Current focus:** Phase 7 — AI prompt layer + OpenAI integration  
-**Prerequisite:** All Phase 6 backend modules are complete (profile through progress snapshots).
+**Current focus:** Phase 8 — Next.js frontend foundation  
+**Prerequisite:** Phase 7 AI prompt layer + OpenAI integration is complete.
 
-Use the prompt below in a new agent session. Review and test the output before moving to Phase 8 (Next.js frontend).
+Use the prompt below in a new agent session. Review and test the output before moving to Phase 9 (end-to-end recovery loop).
 
 ---
 
-## Copy-paste prompt: AI prompt layer + OpenAI integration
+## Copy-paste prompt: Next.js frontend foundation
 
 ```text
-Build the AI prompt layer for Interview Preparation Coach.
+Implement the Next.js frontend foundation for Interview Preparation Coach.
 
-Context:
-- Personal-first interview recovery app for experienced engineers.
-- Stack: Go + Chi + pgx + sqlc + PostgreSQL.
-- Core loop: profile -> diagnosis -> plan -> practice -> evaluate -> progress -> adjust.
-- All Phase 6 backend modules are implemented with placeholder logic (no real OpenAI calls yet).
-- Progress snapshots API: POST /api/v1/progress/snapshot, GET /api/v1/progress/latest, GET /api/v1/progress/snapshots.
+Stack:
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Backend API: Go REST API at http://localhost:8080/api/v1
 
-Existing placeholder modules to replace (Phase 7 wiring):
-- Diagnosis: placeholder diagnostic_report JSON in backend/internal/service/diagnosis.go
-- Plan: static task derivation in backend/internal/service/plan.go
-- Evaluations: placeholder scoring in backend/internal/service/evaluation.go
-- Progress: placeholder stats aggregation in backend/internal/service/progress.go (status: "pending_ai_summary")
-
-Task:
-Implement the AI prompt layer and OpenAI integration only. Do not build frontend.
-
-Requirements:
-1. Create backend/internal/ai/ with:
-   - OpenAI Responses API client wrapper
-   - AI service interface used by domain services
-   - Config from OPENAI_API_KEY (already in backend/.env.example)
-
-2. Create versioned prompt files (e.g. backend/internal/ai/prompts/) for:
-   - baseline diagnosis
-   - recovery plan generation
-   - basic programming evaluation
-   - DSA evaluation
-   - technical answer evaluation
-   - mock interview question generation (stub OK if no API yet)
-   - mock interview grading (stub OK if no API yet)
-   - weekly progress summary
-
-3. For each prompt document: file name, system instruction, user input shape, required JSON output schema, example input/output.
-
-4. Wire AI service into existing modules:
-   - Diagnosis Submit -> real diagnostic_report
-   - Plan Generate -> AI-driven tasks from diagnostic_report
-   - Evaluation Evaluate -> real scores and feedback
-   - Progress CreateSnapshot -> enrich stats with weekly AI summary; set status to "complete"
-
-5. Operational concerns:
-   - Prompt versioning strategy (filename or embedded version field)
-   - Logging: prompt version, model, latency, token usage where available
-   - Fallback behavior if AI call fails (graceful error or degraded placeholder — document choice)
-   - Strict JSON parsing with validation
-
-Rules:
-- AI must never be called directly from the frontend.
-- JSON output must be strict and parseable.
-- Feedback must be practical, direct, and non-generic.
-- Match existing backend conventions (repository/service/handler layers).
-- Do not build Next.js frontend in this phase.
+Build pages for:
+1. onboarding/profile setup
+2. baseline diagnosis
+3. recovery plan
+4. daily practice
+5. mock interview practice (UI shell OK — mock interview AI stubs remain backend-only)
+6. progress dashboard
+7. settings/basic config
 
 Return:
-1. Files created or changed
-2. AI service interface and client design
-3. Prompt versioning and logging strategy
-4. How to test manually (curl examples for diagnosis, plan, evaluate, progress)
-5. What is left for Phase 8 (frontend)
+1. frontend file structure
+2. page components
+3. shared UI components
+4. API client layer
+5. state management approach
+6. loading and error states
+7. responsive layout notes
+
+Design requirements:
+- App UI, not a marketing landing page
+- User quickly sees today's task, progress, weak areas, and next action
+- Handle 502 from AI endpoints gracefully (retry messaging)
+
+Rules:
+- Connect to backend API contracts (no direct OpenAI calls from frontend)
+- Do not build payment or job portal UI
 ```
 
 ---
 
-## After AI integration
+## After frontend foundation
 
-Phase 7 completes the backend intelligence layer. Proceed to **Phase 8 — Next.js frontend foundation** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
+Phase 8 completes the user-facing shell. Proceed to **Phase 9 — End-to-end recovery workflow** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
 
-1. Onboarding/profile, diagnosis, plan, daily practice, mock interview, progress dashboard, settings
-2. API client layer against existing `/api/v1` contracts
-3. Loading and error states; responsive layout focused on today's task and weak areas
+1. Wire full loop: profile → diagnosis → plan → practice → evaluate → progress
+2. Mock interview flow once backend mock endpoints exist
+3. Manual QA checklist across all pages
+
+## Manual AI testing (Phase 7)
+
+With `OPENAI_API_KEY` set and backend running on `:8080`:
+
+```bash
+# 1. Profile
+curl -s -X POST http://localhost:8080/api/v1/profile \
+  -H 'Content-Type: application/json' \
+  -d '{"experience_years":8,"target_role":"Senior Backend Engineer","target_companies":"Google","weak_areas_self":"DSA, system design","timeline":"60 days"}'
+
+# 2. Diagnosis (AI)
+curl -s -X POST http://localhost:8080/api/v1/diagnosis \
+  -H 'Content-Type: application/json' \
+  -d '{"coding_answer":"Two-sum with hash map O(n)...","conceptual_answer":"Load balancer + cache...","behavioral_answer":"STAR story on production incident..."}'
+
+# 3. Plan (AI)
+curl -s -X POST http://localhost:8080/api/v1/plan
+
+# 4. Practice + evaluate (AI)
+curl -s -X POST http://localhost:8080/api/v1/attempts \
+  -H 'Content-Type: application/json' \
+  -d '{"question_id":"a1000001-0000-4000-8000-000000000004","submitted_content":"function findMax(nums){...}","time_taken_seconds":300}'
+# Use returned attempt id:
+curl -s -X POST http://localhost:8080/api/v1/attempts/{ATTEMPT_ID}/evaluate
+
+# 5. Progress snapshot (AI summary; degrades if AI fails)
+curl -s -X POST http://localhost:8080/api/v1/progress/snapshot
+curl -s http://localhost:8080/api/v1/progress/latest
+```
+
+See `backend/internal/ai/README.md` for prompt versioning, logging, and fallback behavior.

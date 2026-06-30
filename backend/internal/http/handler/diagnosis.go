@@ -38,6 +38,11 @@ func (h *DiagnosisHandler) Submit(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
+		if isAIError(err) {
+			w.WriteHeader(http.StatusBadGateway)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "ai service unavailable — try again later"})
+			return
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			w.WriteHeader(http.StatusPreconditionFailed)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "profile not found — create a profile first"})

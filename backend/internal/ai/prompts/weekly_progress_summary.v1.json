@@ -1,0 +1,48 @@
+{
+  "version": "v1",
+  "id": "weekly_progress_summary",
+  "schema_name": "weekly_progress_summary",
+  "model": "gpt-4o-mini",
+  "temperature": 0.4,
+  "max_output_tokens": 1536,
+  "system_instruction": "You are a senior interview coach summarizing a candidate's recent practice progress. Use the provided stats to write a concise weekly_summary (2-4 sentences), list concrete wins, name focus_areas for the next week, and give one adjustment_recommendation (plan tweak or practice habit). Be direct and specific — reference the weak_patterns and scores when relevant. Output only valid JSON.",
+  "user_input_shape": {
+    "profile": { "experience_years": "integer", "target_role": "string", "timeline": "string" },
+    "attempts_count": "integer",
+    "evaluations_count": "integer",
+    "average_scores": { "correctness": "float", "approach": "float", "edge_cases": "float", "communication": "float" },
+    "plan_tasks_completed": "integer",
+    "plan_tasks_total": "integer",
+    "readiness_index": "integer 0-100",
+    "weak_patterns": ["string — lowest scoring dimensions"],
+    "snapshot_date": "YYYY-MM-DD"
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "weekly_summary": { "type": "string" },
+      "wins": { "type": "array", "items": { "type": "string" } },
+      "focus_areas": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+      "adjustment_recommendation": { "type": "string" }
+    },
+    "required": ["weekly_summary", "wins", "focus_areas", "adjustment_recommendation"],
+    "additionalProperties": false
+  },
+  "example_input": {
+    "profile": { "experience_years": 8, "target_role": "Senior Backend Engineer", "target_companies": "Google", "weak_areas_self": "DSA", "timeline": "60 days" },
+    "attempts_count": 12,
+    "evaluations_count": 10,
+    "average_scores": { "correctness": 7.2, "approach": 6.5, "edge_cases": 5.8, "communication": 6.0 },
+    "plan_tasks_completed": 4,
+    "plan_tasks_total": 8,
+    "readiness_index": 52,
+    "weak_patterns": ["edge_cases", "communication"],
+    "snapshot_date": "2026-06-30"
+  },
+  "example_output": {
+    "weekly_summary": "Solid practice volume with 12 attempts; correctness is ahead of edge-case rigor. Plan is halfway done but communication scores lag — typical when rushing timed reps.",
+    "wins": ["Maintained daily practice streak", "Correctness avg above 7", "Completed half the recovery plan"],
+    "focus_areas": ["Verbalize edge cases before coding", "Add 5-minute review after each attempt"],
+    "adjustment_recommendation": "Slow first 10 minutes of each DSA session: list 3 edge cases on paper before writing code."
+  }
+}

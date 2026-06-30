@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"sort"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/repository"
 )
@@ -31,16 +33,21 @@ type SnapshotAverageScores struct {
 }
 
 // SnapshotStats is the JSONB payload stored on each progress snapshot.
-// Phase 7 will enrich this with AI-generated weekly summaries.
 type SnapshotStats struct {
-	AttemptsCount       int32                 `json:"attempts_count"`
-	EvaluationsCount    int32                 `json:"evaluations_count"`
-	AverageScores       SnapshotAverageScores `json:"average_scores"`
-	PlanTasksCompleted  int32                 `json:"plan_tasks_completed"`
-	PlanTasksTotal      int32                 `json:"plan_tasks_total"`
-	ReadinessIndex      int32                 `json:"readiness_index"`
-	WeakPatterns        []string              `json:"weak_patterns"`
-	Status              string                `json:"status"`
+	AttemptsCount            int32                 `json:"attempts_count"`
+	EvaluationsCount         int32                 `json:"evaluations_count"`
+	AverageScores            SnapshotAverageScores `json:"average_scores"`
+	PlanTasksCompleted       int32                 `json:"plan_tasks_completed"`
+	PlanTasksTotal           int32                 `json:"plan_tasks_total"`
+	ReadinessIndex           int32                 `json:"readiness_index"`
+	WeakPatterns             []string              `json:"weak_patterns"`
+	Status                   string                `json:"status"`
+	WeeklySummary            string                `json:"weekly_summary,omitempty"`
+	Wins                     []string              `json:"wins,omitempty"`
+	FocusAreas               []string              `json:"focus_areas,omitempty"`
+	AdjustmentRecommendation string                `json:"adjustment_recommendation,omitempty"`
+	PromptVersion            string                `json:"prompt_version,omitempty"`
+	Model                    string                `json:"model,omitempty"`
 }
 
 // ProgressSnapshotResponse is the API shape for a single snapshot.
@@ -68,17 +75,20 @@ type progressService struct {
 	profileRepo  repository.ProfileRepository
 	planRepo     repository.PlanRepository
 	progressRepo repository.ProgressRepository
+	aiService    ai.Service
 }
 
 func NewProgressService(
 	profileRepo repository.ProfileRepository,
 	planRepo repository.PlanRepository,
 	progressRepo repository.ProgressRepository,
+	aiService ai.Service,
 ) ProgressService {
 	return &progressService{
 		profileRepo:  profileRepo,
 		planRepo:     planRepo,
 		progressRepo: progressRepo,
+		aiService:    aiService,
 	}
 }
 
@@ -100,7 +110,7 @@ func (s *progressService) CreateSnapshot(ctx context.Context) (ProgressSnapshotR
 		return ProgressSnapshotResponse{}, fmt.Errorf("failed to check existing snapshot: %w", err)
 	}
 
-	stats, err := s.computeStats(ctx, profile.ID)
+	stats, err := s.computeStats(ctx, profile)
 	if err != nil {
 		return ProgressSnapshotResponse{}, err
 	}
@@ -194,7 +204,9 @@ func (s *progressService) ListSnapshots(ctx context.Context, limitStr, startDate
 	return ListProgressSnapshotsResponse{Snapshots: result}, nil
 }
 
-func (s *progressService) computeStats(ctx context.Context, profileID pgtype.UUID) (SnapshotStats, error) {
+func (s *progressService) computeStats(ctx context.Context, profile db.Profile) (SnapshotStats, error) {
+	profileID := profile.ID
+
 	attemptsCount, err := s.progressRepo.CountAttempts(ctx, profileID)
 	if err != nil {
 		return SnapshotStats{}, err
@@ -222,16 +234,80 @@ func (s *progressService) computeStats(ctx context.Context, profileID pgtype.UUI
 		evalStats.EvaluationsCount,
 	)
 
-	return SnapshotStats{
+	weakPatterns := deriveWeakPatterns(avgScores, evalStats.EvaluationsCount)
+
+	stats := SnapshotStats{
 		AttemptsCount:      attemptsCount,
 		EvaluationsCount:   evalStats.EvaluationsCount,
 		AverageScores:      avgScores,
 		PlanTasksCompleted: planTasksCompleted,
 		PlanTasksTotal:     planTasksTotal,
 		ReadinessIndex:     readinessIndex,
-		WeakPatterns:       deriveWeakPatterns(avgScores, evalStats.EvaluationsCount),
-		Status:             "pending_ai_summary",
-	}, nil
+		WeakPatterns:       weakPatterns,
+	}
+
+	snapshotDate := todayDate()
+	dateStr := formatSnapshotDate(snapshotDate)
+
+	summaryInput := ai.WeeklyProgressInput{
+		Profile:            profileToAIContext(profile),
+		AttemptsCount:      attemptsCount,
+		EvaluationsCount:   evalStats.EvaluationsCount,
+		AverageScores: ai.SnapshotAverageScores{
+			Correctness:   avgScores.Correctness,
+			Approach:      avgScores.Approach,
+			EdgeCases:     avgScores.EdgeCases,
+			Communication: avgScores.Communication,
+		},
+		PlanTasksCompleted: planTasksCompleted,
+		PlanTasksTotal:     planTasksTotal,
+		ReadinessIndex:     readinessIndex,
+		WeakPatterns:       weakPatterns,
+		SnapshotDate:       dateStr,
+	}
+
+	result, err := s.aiService.SummarizeWeeklyProgress(ctx, summaryInput)
+	if err != nil {
+		slog.Warn("AI weekly summary failed; saving degraded snapshot",
+			"error", err,
+			"profile_id", uuidString(profileID),
+		)
+		stats.Status = "degraded_ai_summary"
+		return stats, nil
+	}
+
+	out := result.Data
+	stats.Status = "complete"
+	stats.WeeklySummary = out.WeeklySummary
+	stats.Wins = out.Wins
+	stats.FocusAreas = out.FocusAreas
+	stats.AdjustmentRecommendation = out.AdjustmentRecommendation
+	stats.PromptVersion = out.PromptVersion
+	stats.Model = out.Model
+
+	return stats, nil
+}
+
+func formatSnapshotDate(d pgtype.Date) string {
+	if !d.Valid {
+		return time.Now().UTC().Format("2006-01-02")
+	}
+	t := time.Date(int(d.Time.Year()), time.Month(d.Time.Month()), int(d.Time.Day()), 0, 0, 0, 0, time.UTC)
+	return t.Format("2006-01-02")
+}
+
+func uuidString(id pgtype.UUID) string {
+	if !id.Valid {
+		return ""
+	}
+	return fmt.Sprintf(
+		"%x-%x-%x-%x-%x",
+		id.Bytes[0:4],
+		id.Bytes[4:6],
+		id.Bytes[6:8],
+		id.Bytes[8:10],
+		id.Bytes[10:16],
+	)
 }
 
 func (s *progressService) planTaskCounts(ctx context.Context, profileID pgtype.UUID) (completed int32, total int32) {
