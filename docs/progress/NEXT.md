@@ -1,89 +1,65 @@
 # Next Implementation Step
 
-**Current focus:** Phase 8 — Next.js frontend foundation  
-**Prerequisite:** Phase 7 AI integration complete; backend endpoint + service tests pass (`cd backend && go test ./...`).
+**Current focus:** Phase 9 — End-to-end recovery workflow  
+**Prerequisite:** Phase 8 frontend foundation complete; backend tests pass (`cd backend && go test ./...`); frontend builds (`cd frontend && npm run build`).
 
-Use the prompt below in a new agent session. Review and test the output before moving to Phase 9 (end-to-end recovery loop).
+Use the prompt below in a new agent session. Review and test the output before moving to Phase 10 (testing and review).
 
 ---
 
-## Copy-paste prompt: Next.js frontend foundation
+## Copy-paste prompt: End-to-end recovery workflow
 
 ```text
-Implement the Next.js frontend foundation for Interview Preparation Coach.
+Connect the frontend and backend into the full personal recovery loop.
 
-Stack:
-- Next.js
-- TypeScript
-- Tailwind CSS
-- Backend API: Go REST API at http://localhost:8080/api/v1
+The loop is:
+profile -> diagnosis -> plan -> practice -> evaluate -> progress -> adjust
 
-Build pages for:
-1. onboarding/profile setup
-2. baseline diagnosis
-3. recovery plan
-4. daily practice
-5. mock interview practice (UI shell OK — mock interview AI stubs remain backend-only)
-6. progress dashboard
-7. settings/basic config
+Implement or verify:
+1. profile creation saves correctly
+2. baseline diagnosis can be submitted
+3. diagnosis result creates or updates recovery plan
+4. user can start today's practice
+5. user can submit answer or code
+6. backend evaluates attempt
+7. evaluation is saved
+8. progress dashboard updates
+9. next recommended task is shown
 
 Return:
-1. frontend file structure
-2. page components
-3. shared UI components
-4. API client layer
-5. state management approach
-6. loading and error states
-7. responsive layout notes
-
-Design requirements:
-- App UI, not a marketing landing page
-- User quickly sees today's task, progress, weak areas, and next action
-- Handle 502 from AI endpoints gracefully (retry messaging)
+1. files changed
+2. integration flow summary
+3. API calls used by each page
+4. data persisted at each step
+5. remaining gaps
+6. manual test checklist
 
 Rules:
-- Connect to backend API contracts (no direct OpenAI calls from frontend)
-- Do not build payment or job portal UI
+- Do not add new feature scope.
+- Focus on making the core loop reliable.
 ```
 
 ---
 
-## After frontend foundation
+## After end-to-end integration
 
-Phase 8 completes the user-facing shell. Proceed to **Phase 9 — End-to-end recovery workflow** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
+Phase 9 wires the full loop. Proceed to **Phase 10 — Testing and review** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
 
-1. Wire full loop: profile → diagnosis → plan → practice → evaluate → progress
-2. Mock interview flow once backend mock endpoints exist
-3. Manual QA checklist across all pages
+1. Review backend API correctness, AI parsing, and frontend integration
+2. Fix workflow gaps and error handling
+3. Document findings before deployment (Phase 11)
 
-## Manual AI testing (Phase 7)
-
-With `OPENAI_API_KEY` set and backend running on `:8080`:
+## Local dev (frontend + backend)
 
 ```bash
-# 1. Profile
-curl -s -X POST http://localhost:8080/api/v1/profile \
-  -H 'Content-Type: application/json' \
-  -d '{"experience_years":8,"target_role":"Senior Backend Engineer","target_companies":"Google","weak_areas_self":"DSA, system design","timeline":"60 days"}'
+# Terminal 1 — API (from repo root)
+cd backend && go run ./cmd/api
 
-# 2. Diagnosis (AI)
-curl -s -X POST http://localhost:8080/api/v1/diagnosis \
-  -H 'Content-Type: application/json' \
-  -d '{"coding_answer":"Two-sum with hash map O(n)...","conceptual_answer":"Load balancer + cache...","behavioral_answer":"STAR story on production incident..."}'
-
-# 3. Plan (AI)
-curl -s -X POST http://localhost:8080/api/v1/plan
-
-# 4. Practice + evaluate (AI)
-curl -s -X POST http://localhost:8080/api/v1/attempts \
-  -H 'Content-Type: application/json' \
-  -d '{"question_id":"a1000001-0000-4000-8000-000000000004","submitted_content":"function findMax(nums){...}","time_taken_seconds":300}'
-# Use returned attempt id:
-curl -s -X POST http://localhost:8080/api/v1/attempts/{ATTEMPT_ID}/evaluate
-
-# 5. Progress snapshot (AI summary; degrades if AI fails)
-curl -s -X POST http://localhost:8080/api/v1/progress/snapshot
-curl -s http://localhost:8080/api/v1/progress/latest
+# Terminal 2 — frontend
+cd frontend && cp .env.local.example .env.local   # if not done
+cd frontend && npm run dev
 ```
 
-See `backend/internal/ai/README.md` for prompt versioning, logging, and fallback behavior.
+Frontend: http://localhost:3000 — API: http://localhost:8080/api/v1
+
+See README for database setup and manual AI curl examples (`backend/internal/ai/README.md`).

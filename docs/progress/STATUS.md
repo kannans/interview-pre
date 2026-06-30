@@ -5,7 +5,7 @@
 
 ## Summary
 
-Planning and database schema are complete. The Go backend foundation is running with all Phase 6 product modules and **Phase 7 AI integration** wired through `backend/internal/ai`. Diagnosis, plan generation, evaluations, and progress snapshots call OpenAI Responses API with versioned prompts and strict JSON validation. Frontend, end-to-end integration, tests, and deployment are not started.
+Planning, database schema, Go backend (Phases 5–7), and **Phase 8 Next.js frontend foundation** are complete. The frontend includes all seven app pages, API client layer, React Query hooks, shared UI components, and AI error handling. End-to-end workflow integration, comprehensive testing, and deployment are not started.
 
 ## Phase checklist
 
@@ -13,12 +13,12 @@ Planning and database schema are complete. The Go backend foundation is running 
 |-------|------|--------|
 | 1 | Freeze MVP scope | Done |
 | 2 | Technical architecture | Done |
-| 3 | Folder structure | Partial — backend + `db/` + `backend/internal/ai/prompts/`; no `frontend/` or `deploy/` |
+| 3 | Folder structure | Partial — `backend/`, `db/`, `frontend/`; no `deploy/` |
 | 4 | PostgreSQL schema & migrations | Done |
 | 5 | Go backend foundation | Done |
 | 6 | Backend product modules | Done (7/7) |
 | 7 | AI prompt layer + OpenAI | Done |
-| 8 | Next.js frontend | Not started |
+| 8 | Next.js frontend | Done |
 | 9 | End-to-end recovery loop | Not started |
 | 10 | Testing & review | Not started |
 | 11 | EC2 / Docker deployment | Not started |
@@ -37,6 +37,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 - [x] Evaluations API: `POST` `/api/v1/attempts/{id}/evaluate`, `GET` `/api/v1/attempts/{id}/evaluation` (**OpenAI scoring by question type**)
 - [x] Progress snapshots API: `POST` `/api/v1/progress/snapshot`, `GET` `/api/v1/progress/latest`, `GET` `/api/v1/progress/snapshots` (**AI weekly summary**; `status: complete` or `degraded_ai_summary`)
 - [x] AI layer: `backend/internal/ai/` — Responses API client, 8 versioned prompts, strict JSON validation, logging
+- [x] Next.js frontend: onboarding, diagnosis, plan, practice, mock interview (UI shell), progress, settings; API client + React Query; app shell layout
 
 ## Backend modules
 
@@ -50,6 +51,19 @@ Planning and database schema are complete. The Go backend foundation is running 
 | Evaluations | Done | AI scores/feedback; one per attempt |
 | Progress snapshots | Done | Daily snapshot + AI summary; 409 if already exists for today |
 | AI service | Done | Mock interview prompts stubbed; API returns `ErrNotImplemented` |
+
+## Frontend pages
+
+| Page | Route | Status |
+|------|-------|--------|
+| Dashboard | `/` | Shell + workflow stage cards |
+| Onboarding / profile | `/onboarding` | Form wired to profile API |
+| Baseline diagnosis | `/diagnosis` | Submit + view diagnosis |
+| Recovery plan | `/plan` | Today's tasks + generate plan |
+| Daily practice | `/practice`, `/practice/[id]` | Question list + attempt submit |
+| Mock interview | `/mock-interview` | UI shell (backend stubs) |
+| Progress | `/progress` | Snapshot + latest stats |
+| Settings | `/settings` | API base URL config |
 
 ## API surface today
 
@@ -77,9 +91,8 @@ Planning and database schema are complete. The Go backend foundation is running 
 
 ## Not started
 
-- [ ] Next.js frontend (onboarding, diagnosis, plan, practice, mock interview, progress, settings)
+- [ ] End-to-end workflow integration (verify full loop in UI)
 - [ ] Mock interview backend endpoints (prompts exist; service stubs only)
-- [ ] End-to-end workflow integration
 - [ ] Integration tests against real PostgreSQL (optional CI job)
 - [ ] Deployment (Dockerfiles, docker-compose, EC2)
 
@@ -91,19 +104,24 @@ Backend unit + handler tests (no DB/OpenAI required):
 cd backend && go test ./...
 ```
 
-Coverage includes all 19 API routes (happy path + key error statuses), service validation/business logic, AI schema parsing, and health handler.
+Frontend production build:
+
+```bash
+cd frontend && npm run build
+```
 
 ## Blockers
 
-- **No frontend** — blocks personal daily use
+- **End-to-end loop not verified** — pages exist but full profile → progress flow needs integration QA
 
 ## Repo layout notes
 
 - `db/` — migrations, sqlc config, and SQL queries (source of truth)
 - `backend/internal/db/` — generated sqlc code + pgx connection pool
 - `backend/internal/ai/prompts/` — versioned prompt JSON documents
+- `frontend/src/` — Next.js app, API client, hooks, UI components
 - `docs/progress/` — build status and next-step prompts
 
 ## Recommended next step
 
-Implement the **Next.js frontend foundation**. See [NEXT.md](./NEXT.md) for the copy-paste prompt.
+Wire the **end-to-end recovery workflow** (Phase 9). See [NEXT.md](./NEXT.md) for the copy-paste prompt.
