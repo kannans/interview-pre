@@ -44,6 +44,12 @@ Phase 11 ships the stack. Proceed to **Phase 12 — 30-day personal validation p
 ## Local dev (frontend + backend)
 
 ```bash
+./runserver.sh
+```
+
+Or run each service in its own terminal:
+
+```bash
 # Terminal 1 — API (from repo root)
 cd backend && go run ./cmd/api
 

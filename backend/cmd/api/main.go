@@ -11,10 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kannans/interview-prep/backend/internal/config"
 	"github.com/kannans/interview-prep/backend/internal/ai"
+	"github.com/kannans/interview-prep/backend/internal/config"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	internalHttp "github.com/kannans/interview-prep/backend/internal/http"
+	"github.com/kannans/interview-prep/backend/internal/migrate"
 )
 
 func main() {
@@ -33,7 +34,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 2. Establish Database Connection Pool
+	// 2. Apply pending database migrations
+	if err := migrate.Up(cfg.DatabaseURL); err != nil {
+		slog.Error("Database migration failed", "error", err)
+		os.Exit(1)
+	}
+
+	// 3. Establish Database Connection Pool
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -55,7 +62,7 @@ func main() {
 	})
 	aiService := ai.NewService(openaiClient, promptRegistry)
 
-	// 3. Set up HTTP router & server
+	// 4. Set up HTTP router & server
 	router := internalHttp.NewRouter(dbPool, aiService)
 
 	srv := &http.Server{
@@ -66,7 +73,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 4. Run HTTP server in background goroutine
+	// 5. Run HTTP server in background goroutine
 	go func() {
 		slog.Info(fmt.Sprintf("HTTP Server running on port %s", cfg.Port), "env", cfg.Env)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -75,7 +82,7 @@ func main() {
 		}
 	}()
 
-	// 5. Intercept Interrupt signals for graceful shutdown
+	// 6. Intercept Interrupt signals for graceful shutdown
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 

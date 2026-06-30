@@ -89,6 +89,7 @@ func (s *evaluationService) Evaluate(ctx context.Context, attemptID pgtype.UUID)
 		QuestionContent:  question.Content,
 		SubmittedContent: attempt.SubmittedContent,
 		TimeTakenSeconds: attempt.TimeTakenSeconds,
+		Language:         attempt.Language,
 	}
 	if question.Constraints.Valid {
 		evalInput.Constraints = question.Constraints.String

@@ -14,7 +14,7 @@ type AttemptListParams struct {
 }
 
 type AttemptRepository interface {
-	Create(ctx context.Context, profileID, questionID pgtype.UUID, submittedContent string, timeTakenSeconds int32) (db.Attempt, error)
+	Create(ctx context.Context, profileID, questionID pgtype.UUID, submittedContent string, timeTakenSeconds int32, language string) (db.Attempt, error)
 	GetByID(ctx context.Context, id pgtype.UUID) (db.Attempt, error)
 	List(ctx context.Context, params AttemptListParams) ([]db.Attempt, error)
 }
@@ -27,12 +27,13 @@ func NewAttemptRepository(queries db.Querier) AttemptRepository {
 	return &attemptRepository{queries: queries}
 }
 
-func (r *attemptRepository) Create(ctx context.Context, profileID, questionID pgtype.UUID, submittedContent string, timeTakenSeconds int32) (db.Attempt, error) {
+func (r *attemptRepository) Create(ctx context.Context, profileID, questionID pgtype.UUID, submittedContent string, timeTakenSeconds int32, language string) (db.Attempt, error) {
 	attempt, err := r.queries.CreateAttempt(ctx, db.CreateAttemptParams{
 		ProfileID:        profileID,
 		QuestionID:       questionID,
 		SubmittedContent: submittedContent,
 		TimeTakenSeconds: timeTakenSeconds,
+		Language:         language,
 	})
 	if err != nil {
 		return db.Attempt{}, fmt.Errorf("failed to create attempt: %w", err)

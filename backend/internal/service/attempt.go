@@ -23,6 +23,7 @@ type AttemptInput struct {
 	QuestionID       string `json:"question_id"`
 	SubmittedContent string `json:"submitted_content"`
 	TimeTakenSeconds int32  `json:"time_taken_seconds"`
+	Language         string `json:"language"`
 }
 
 func (i AttemptInput) Validate() error {
@@ -35,7 +36,15 @@ func (i AttemptInput) Validate() error {
 	if i.TimeTakenSeconds <= 0 {
 		return errors.New("time_taken_seconds must be greater than zero")
 	}
+	if _, err := NormalizePracticeLanguage(i.Language); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (i AttemptInput) ResolvedLanguage() string {
+	lang, _ := NormalizePracticeLanguage(i.Language)
+	return lang
 }
 
 // ListAttemptsResponse is the API response shape for listing attempts.
@@ -94,7 +103,7 @@ func (s *attemptService) Submit(ctx context.Context, input AttemptInput) (db.Att
 		return db.Attempt{}, fmt.Errorf("failed to get question: %w", err)
 	}
 
-	attempt, err := s.attemptRepo.Create(ctx, profile.ID, questionID, input.SubmittedContent, input.TimeTakenSeconds)
+	attempt, err := s.attemptRepo.Create(ctx, profile.ID, questionID, input.SubmittedContent, input.TimeTakenSeconds, input.ResolvedLanguage())
 	if err != nil {
 		return db.Attempt{}, fmt.Errorf("failed to submit attempt: %w", err)
 	}

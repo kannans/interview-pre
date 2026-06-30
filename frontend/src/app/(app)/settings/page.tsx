@@ -6,6 +6,11 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useSettingsStore } from "@/lib/store/settings";
+import {
+  PRACTICE_LANGUAGE_LABELS,
+  PRACTICE_LANGUAGES,
+  type PracticeLanguage,
+} from "@/lib/practice/languages";
 
 export default function SettingsPage() {
   const settings = useSettingsStore();
@@ -16,6 +21,9 @@ export default function SettingsPage() {
     settings.setSettings({
       apiBaseUrl: String(form.get("apiBaseUrl") ?? settings.apiBaseUrl),
       defaultPracticeMinutes: Number(form.get("defaultPracticeMinutes") ?? 30),
+      defaultPracticeLanguage: String(
+        form.get("defaultPracticeLanguage") ?? settings.defaultPracticeLanguage,
+      ) as PracticeLanguage,
       showHintsByDefault: form.get("showHintsByDefault") === "on",
       compactNav: form.get("compactNav") === "on",
     });
@@ -44,6 +52,25 @@ export default function SettingsPage() {
             max={120}
             defaultValue={settings.defaultPracticeMinutes}
           />
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Default code language
+            </span>
+            <select
+              name="defaultPracticeLanguage"
+              defaultValue={settings.defaultPracticeLanguage}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            >
+              {PRACTICE_LANGUAGES.map((lang) => (
+                <option key={lang} value={lang}>
+                  {PRACTICE_LANGUAGE_LABELS[lang]}
+                </option>
+              ))}
+            </select>
+            <span className="block text-xs text-zinc-500">
+              Used as the starter template when you open a practice question.
+            </span>
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

@@ -12,6 +12,15 @@ import { useDiagnosis, useSubmitDiagnosisAndPlan } from "@/hooks/useDiagnosis";
 import { parseDiagnosticReport } from "@/lib/utils/diagnostic-report";
 import { formatCategory, formatPercent } from "@/lib/utils/format";
 
+const CODING_PLACEHOLDER =
+  "Two Sum: iterate once, store each number in a hash map with its index. For each value, check if (target - value) is in the map — O(n) time, O(n) space. I'd call out empty array and duplicate-index edge cases before coding.";
+
+const CONCEPTUAL_PLACEHOLDER =
+  "URL shortener at scale: stateless API behind a load balancer, Postgres for slug→URL mappings, Redis cache for hot links, base62 IDs. Trade-offs: cache consistency vs read latency, shard by slug prefix, rate limit creates at the edge.";
+
+const BEHAVIORAL_PLACEHOLDER =
+  "Situation: checkout p99 hit 5s during a flash sale. Task: lead on-call fix. Action: traced to a missing index + cold cache, added index, warmed cache, rolled back bad deploy. Result: p99 under 200ms; added load test gate in CI.";
+
 export default function DiagnosisPage() {
   const router = useRouter();
   const existing = useDiagnosis();
@@ -85,6 +94,7 @@ export default function DiagnosisPage() {
           <Textarea
             label="Coding answer"
             hint="Describe your approach to a medium DSA problem (e.g. two-sum with hash map)."
+            placeholder={CODING_PLACEHOLDER}
             value={codingAnswer}
             onChange={(e) => setCodingAnswer(e.target.value)}
             required
@@ -92,6 +102,7 @@ export default function DiagnosisPage() {
           <Textarea
             label="Conceptual answer"
             hint="Explain a system design or architecture concept briefly."
+            placeholder={CONCEPTUAL_PLACEHOLDER}
             value={conceptualAnswer}
             onChange={(e) => setConceptualAnswer(e.target.value)}
             required
@@ -99,6 +110,7 @@ export default function DiagnosisPage() {
           <Textarea
             label="Behavioral answer"
             hint="Use STAR format for a leadership or incident story."
+            placeholder={BEHAVIORAL_PLACEHOLDER}
             value={behavioralAnswer}
             onChange={(e) => setBehavioralAnswer(e.target.value)}
             required

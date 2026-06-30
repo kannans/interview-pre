@@ -15,6 +15,7 @@ type Attempt struct {
 	SubmittedContent string             `json:"submitted_content"`
 	TimeTakenSeconds int32              `json:"time_taken_seconds"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	Language         string             `json:"language"`
 }
 
 type BaselineDiagnosis struct {

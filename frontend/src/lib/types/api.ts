@@ -114,6 +114,7 @@ export interface Attempt {
   question_id: string;
   submitted_content: string;
   time_taken_seconds: number;
+  language: string;
   created_at: string;
 }
 
@@ -121,6 +122,7 @@ export interface AttemptInput {
   question_id: string;
   submitted_content: string;
   time_taken_seconds: number;
+  language: string;
 }
 
 export interface ListAttemptsResponse {

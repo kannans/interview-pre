@@ -89,8 +89,8 @@ ORDER BY type ASC, category ASC, level ASC, created_at ASC;
 SELECT * FROM questions WHERE id = $1;
 
 -- name: CreateAttempt :one
-INSERT INTO attempts (profile_id, question_id, submitted_content, time_taken_seconds)
-VALUES ($1, $2, $3, $4)
+INSERT INTO attempts (profile_id, question_id, submitted_content, time_taken_seconds, language)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetAttempt :one

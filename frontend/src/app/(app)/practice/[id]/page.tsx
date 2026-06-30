@@ -4,11 +4,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { TopBar } from "@/components/layout/TopBar";
 import { Card } from "@/components/ui/Card";
-import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { CodeEditor } from "@/components/practice/CodeEditor";
+import { LanguageSelect } from "@/components/practice/LanguageSelect";
 import {
   useEvaluateAttempt,
   useQuestion,
@@ -19,6 +20,11 @@ import { useSettingsStore } from "@/lib/store/settings";
 import { formatCategory, formatLevel } from "@/lib/utils/format";
 import { isApiError } from "@/lib/api";
 import { attemptsApi } from "@/lib/api/attempts";
+import {
+  getStarterCode,
+  monacoLanguageId,
+  type PracticeLanguage,
+} from "@/lib/practice/languages";
 
 export default function PracticeQuestionPage() {
   const params = useParams<{ id: string }>();
@@ -30,10 +36,11 @@ export default function PracticeQuestionPage() {
   const submitAttempt = useSubmitAttempt();
   const evaluateAttempt = useEvaluateAttempt();
   const defaultMinutes = useSettingsStore((s) => s.defaultPracticeMinutes);
+  const defaultLanguage = useSettingsStore((s) => s.defaultPracticeLanguage);
 
-  const [answer, setAnswer] = useState<string | null>(null);
+  const [language, setLanguage] = useState<PracticeLanguage>(defaultLanguage);
+  const [answer, setAnswer] = useState("");
   const [elapsed, setElapsed] = useState(0);
-  const [attemptId, setAttemptId] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<{
     score_correctness: number;
     score_approach: number;
@@ -46,12 +53,18 @@ export default function PracticeQuestionPage() {
   } | null>(null);
 
   useEffect(() => {
+    setLanguage(defaultLanguage);
+  }, [defaultLanguage]);
+
+  useEffect(() => {
+    if (!question.data) return;
+    setAnswer(getStarterCode(question.data, language));
+  }, [question.data, language]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => window.clearInterval(timer);
   }, []);
-
-  const answerValue =
-    answer ?? question.data?.starter_code ?? "";
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -60,12 +73,12 @@ export default function PracticeQuestionPage() {
     submitAttempt.mutate(
       {
         question_id: questionId,
-        submitted_content: answerValue,
+        submitted_content: answer,
         time_taken_seconds: timeTaken,
+        language,
       },
       {
         onSuccess: (attempt) => {
-          setAttemptId(attempt.id);
           evaluateAttempt.mutate(attempt.id, {
             onSuccess: (ev) => {
               setEvaluation(ev);
@@ -107,6 +120,9 @@ export default function PracticeQuestionPage() {
   }
 
   const q = question.data!;
+  const isConcept = q.type === "concept";
+  const editorLanguage = isConcept ? "markdown" : monacoLanguageId(language);
+  const readOnly = !!evaluation;
 
   return (
     <>
@@ -138,17 +154,27 @@ export default function PracticeQuestionPage() {
 
         <Card title="Your answer">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Textarea
-              label="Solution"
-              value={answerValue}
-              onChange={(e) => setAnswer(e.target.value)}
-              className="min-h-48 font-mono text-xs"
-              required
+            {!isConcept && (
+              <LanguageSelect
+                value={language}
+                onChange={setLanguage}
+                disabled={readOnly}
+              />
+            )}
+
+            <CodeEditor
+              value={answer}
+              onChange={setAnswer}
+              language={language}
+              editorLanguage={editorLanguage}
+              readOnly={readOnly}
+              minHeight={isConcept ? "16rem" : "20rem"}
             />
 
             <Button
               type="submit"
               loading={submitAttempt.isPending || evaluateAttempt.isPending}
+              disabled={readOnly}
             >
               Submit & evaluate
             </Button>

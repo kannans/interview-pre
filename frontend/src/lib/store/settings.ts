@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { PracticeLanguage } from "@/lib/practice/languages";
 
 export type AppSettings = {
   apiBaseUrl: string;
   defaultPracticeMinutes: number;
+  defaultPracticeLanguage: PracticeLanguage;
   showHintsByDefault: boolean;
   compactNav: boolean;
 };
@@ -17,6 +19,7 @@ const DEFAULTS: AppSettings = {
   apiBaseUrl:
     process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1",
   defaultPracticeMinutes: 30,
+  defaultPracticeLanguage: "javascript",
   showHintsByDefault: false,
   compactNav: false,
 };
@@ -28,7 +31,7 @@ export const useSettingsStore = create<SettingsState>()(
       setSettings: (partial) => set((state) => ({ ...state, ...partial })),
       resetSettings: () => set(DEFAULTS),
     }),
-    { name: "ipc-settings" },
+    { name: "ipc-settings", merge: (persisted, current) => ({ ...current, ...(persisted as object) }) },
   ),
 );
 

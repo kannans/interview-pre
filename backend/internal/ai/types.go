@@ -89,6 +89,7 @@ type EvaluationInput struct {
 	SolutionHint     string         `json:"solution_hint,omitempty"`
 	SubmittedContent string         `json:"submitted_content"`
 	TimeTakenSeconds int32          `json:"time_taken_seconds"`
+	Language         string         `json:"language,omitempty"`
 }
 
 // EvaluationOutput is the validated AI output for practice evaluation.

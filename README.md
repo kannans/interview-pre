@@ -106,6 +106,26 @@ For the full checklist and next implementation step, see [`docs/progress/STATUS.
 
 ## Local development
 
+### Quick start (backend + frontend)
+
+From the repo root:
+
+```bash
+./runserver.sh
+```
+
+This starts:
+- **Frontend** at http://localhost:3000 (`next dev` — hot reload built in)
+- **Backend** at http://localhost:8080 (`air` if installed, otherwise `go run` with a file watcher)
+
+Install [air](https://github.com/air-verse/air) for faster Go reloads:
+
+```bash
+go install github.com/air-verse/air@latest
+```
+
+Press **Ctrl+C** to stop both servers.
+
 ### Prerequisites
 
 - Go 1.23+
@@ -121,11 +141,13 @@ Create a local database:
 createdb interview_prep
 ```
 
-Run migrations:
+Run migrations (optional — the API also runs pending migrations on startup):
 
 ```bash
 migrate -path db/migrations -database "postgres://postgres:postgres@localhost:5432/interview_prep?sslmode=disable" up
 ```
+
+Or apply a single file with `psql` if you do not install the `migrate` CLI.
 
 ### 2. Backend configuration
 
@@ -148,6 +170,8 @@ From the repo root:
 ```bash
 cd backend && go run ./cmd/api
 ```
+
+On startup the API applies any pending migrations from `db/migrations` before accepting requests.
 
 The server listens on port `8080` by default (override with `PORT` in `.env`).
 

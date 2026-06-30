@@ -40,19 +40,22 @@ func TestAttemptSubmitSuccess(t *testing.T) {
 		},
 	}
 	attemptRepo := &testutil.MockAttemptRepository{
-		CreateFn: func(_ context.Context, pid, qid pgtype.UUID, content string, secs int32) (db.Attempt, error) {
-			return db.Attempt{ProfileID: pid, QuestionID: qid, SubmittedContent: content}, nil
+		CreateFn: func(_ context.Context, pid, qid pgtype.UUID, content string, secs int32, language string) (db.Attempt, error) {
+			return db.Attempt{ProfileID: pid, QuestionID: qid, SubmittedContent: content, Language: language}, nil
 		},
 	}
 
 	attempt, err := service.NewAttemptService(profileRepo, questionRepo, attemptRepo).Submit(ctx, service.AttemptInput{
-		QuestionID: testutil.TestUUID, SubmittedContent: "answer", TimeTakenSeconds: 60,
+		QuestionID: testutil.TestUUID, SubmittedContent: "answer", TimeTakenSeconds: 60, Language: "python",
 	})
 	if err != nil {
 		t.Fatalf("submit: %v", err)
 	}
 	if attempt.SubmittedContent != "answer" {
 		t.Fatalf("unexpected content: %q", attempt.SubmittedContent)
+	}
+	if attempt.Language != "python" {
+		t.Fatalf("unexpected language: %q", attempt.Language)
 	}
 }
 

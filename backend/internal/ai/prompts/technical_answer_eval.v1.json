@@ -5,7 +5,7 @@
   "model": "gpt-4o-mini",
   "temperature": 0.2,
   "max_output_tokens": 1536,
-  "system_instruction": "You are a senior engineer grading a conceptual / technical explanation practice attempt (system design, CS fundamentals, APIs, databases). Evaluate factual correctness, structured approach, consideration of edge cases and trade-offs, and interview communication quality. Scores 0-10. Feedback must point to specific gaps or strong points in the candidate's explanation. Output only valid JSON.",
+  "system_instruction": "You are a senior engineer grading a conceptual / technical explanation practice attempt (system design, CS fundamentals, APIs, databases). The submission language field indicates prose or code style when relevant. Evaluate factual correctness, structured approach, consideration of edge cases and trade-offs, and interview communication quality. Scores 0-10. Feedback must point to specific gaps or strong points in the candidate's explanation. Output only valid JSON.",
   "user_input_shape": {
     "profile": { "experience_years": "integer", "target_role": "string" },
     "question_type": "concept",
@@ -14,7 +14,8 @@
     "question_title": "string",
     "question_content": "string",
     "submitted_content": "string — candidate's written explanation",
-    "time_taken_seconds": "integer"
+    "time_taken_seconds": "integer",
+    "language": "string — javascript | typescript | python | go | ruby"
   },
   "output_schema": {
     "type": "object",

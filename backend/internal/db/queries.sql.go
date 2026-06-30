@@ -23,9 +23,9 @@ func (q *Queries) CountAttemptsByProfile(ctx context.Context, profileID pgtype.U
 }
 
 const createAttempt = `-- name: CreateAttempt :one
-INSERT INTO attempts (profile_id, question_id, submitted_content, time_taken_seconds)
-VALUES ($1, $2, $3, $4)
-RETURNING id, profile_id, question_id, submitted_content, time_taken_seconds, created_at
+INSERT INTO attempts (profile_id, question_id, submitted_content, time_taken_seconds, language)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, profile_id, question_id, submitted_content, time_taken_seconds, created_at, language
 `
 
 type CreateAttemptParams struct {
@@ -33,6 +33,7 @@ type CreateAttemptParams struct {
 	QuestionID       pgtype.UUID `json:"question_id"`
 	SubmittedContent string      `json:"submitted_content"`
 	TimeTakenSeconds int32       `json:"time_taken_seconds"`
+	Language         string      `json:"language"`
 }
 
 func (q *Queries) CreateAttempt(ctx context.Context, arg CreateAttemptParams) (Attempt, error) {
@@ -41,6 +42,7 @@ func (q *Queries) CreateAttempt(ctx context.Context, arg CreateAttemptParams) (A
 		arg.QuestionID,
 		arg.SubmittedContent,
 		arg.TimeTakenSeconds,
+		arg.Language,
 	)
 	var i Attempt
 	err := row.Scan(
@@ -50,6 +52,7 @@ func (q *Queries) CreateAttempt(ctx context.Context, arg CreateAttemptParams) (A
 		&i.SubmittedContent,
 		&i.TimeTakenSeconds,
 		&i.CreatedAt,
+		&i.Language,
 	)
 	return i, err
 }
@@ -286,7 +289,7 @@ func (q *Queries) GetActiveRecoveryPlan(ctx context.Context, profileID pgtype.UU
 }
 
 const getAttempt = `-- name: GetAttempt :one
-SELECT id, profile_id, question_id, submitted_content, time_taken_seconds, created_at FROM attempts WHERE id = $1
+SELECT id, profile_id, question_id, submitted_content, time_taken_seconds, created_at, language FROM attempts WHERE id = $1
 `
 
 func (q *Queries) GetAttempt(ctx context.Context, id pgtype.UUID) (Attempt, error) {
@@ -299,6 +302,7 @@ func (q *Queries) GetAttempt(ctx context.Context, id pgtype.UUID) (Attempt, erro
 		&i.SubmittedContent,
 		&i.TimeTakenSeconds,
 		&i.CreatedAt,
+		&i.Language,
 	)
 	return i, err
 }
@@ -586,7 +590,7 @@ func (q *Queries) HasProfile(ctx context.Context) (bool, error) {
 }
 
 const listAttempts = `-- name: ListAttempts :many
-SELECT id, profile_id, question_id, submitted_content, time_taken_seconds, created_at
+SELECT id, profile_id, question_id, submitted_content, time_taken_seconds, created_at, language
 FROM attempts
 WHERE profile_id = $1
   AND ($2::uuid IS NULL OR question_id = $2)
@@ -614,6 +618,7 @@ func (q *Queries) ListAttempts(ctx context.Context, arg ListAttemptsParams) ([]A
 			&i.SubmittedContent,
 			&i.TimeTakenSeconds,
 			&i.CreatedAt,
+			&i.Language,
 		); err != nil {
 			return nil, err
 		}

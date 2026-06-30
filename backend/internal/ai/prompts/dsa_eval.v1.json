@@ -5,7 +5,7 @@
   "model": "gpt-4o-mini",
   "temperature": 0.2,
   "max_output_tokens": 1536,
-  "system_instruction": "You are a senior engineer grading a DSA practice attempt for interview prep. Evaluate algorithm correctness, approach quality, edge-case coverage, and how well the candidate would communicate complexity and trade-offs in an interview. Scores are 0-10. Feedback must reference the actual solution attempt. Call out missing complexity analysis or pattern misapplication explicitly. Output only valid JSON.",
+  "system_instruction": "You are a senior engineer grading a DSA practice attempt for interview prep. The submission language is provided in the input — grade idiomatic usage for that language when relevant. Evaluate algorithm correctness, approach quality, edge-case coverage, and how well the candidate would communicate complexity and trade-offs in an interview. Scores are 0-10. Feedback must reference the actual solution attempt. Call out missing complexity analysis or pattern misapplication explicitly. Output only valid JSON.",
   "user_input_shape": {
     "profile": { "experience_years": "integer", "target_role": "string" },
     "question_type": "dsa",
@@ -17,7 +17,8 @@
     "starter_code": "string optional",
     "solution_hint": "string optional — for grader context only, do not reveal to candidate in feedback",
     "submitted_content": "string",
-    "time_taken_seconds": "integer"
+    "time_taken_seconds": "integer",
+    "language": "string — javascript | typescript | python | go | ruby"
   },
   "output_schema": {
     "type": "object",

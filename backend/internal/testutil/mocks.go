@@ -171,13 +171,13 @@ func (m *MockQuestionRepository) GetByID(ctx context.Context, id pgtype.UUID) (d
 }
 
 type MockAttemptRepository struct {
-	CreateFn  func(ctx context.Context, profileID, questionID pgtype.UUID, content string, timeTaken int32) (db.Attempt, error)
+	CreateFn  func(ctx context.Context, profileID, questionID pgtype.UUID, content string, timeTaken int32, language string) (db.Attempt, error)
 	ListFn    func(ctx context.Context, params repository.AttemptListParams) ([]db.Attempt, error)
 	GetByIDFn func(ctx context.Context, id pgtype.UUID) (db.Attempt, error)
 }
 
-func (m *MockAttemptRepository) Create(ctx context.Context, profileID, questionID pgtype.UUID, content string, timeTaken int32) (db.Attempt, error) {
-	return m.CreateFn(ctx, profileID, questionID, content, timeTaken)
+func (m *MockAttemptRepository) Create(ctx context.Context, profileID, questionID pgtype.UUID, content string, timeTaken int32, language string) (db.Attempt, error) {
+	return m.CreateFn(ctx, profileID, questionID, content, timeTaken, language)
 }
 func (m *MockAttemptRepository) List(ctx context.Context, params repository.AttemptListParams) ([]db.Attempt, error) {
 	return m.ListFn(ctx, params)

@@ -19,6 +19,7 @@ go.work
 go.work.sum
 backend/api
 backend/bin/
+backend/tmp/
 
 # Node / Next.js
 node_modules/
