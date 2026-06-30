@@ -27,7 +27,7 @@ profile → diagnosis → plan → practice → evaluate → progress → adjust
 | Database | PostgreSQL |
 | DB access | pgx, sqlc |
 | Migrations | golang-migrate |
-| AI | OpenAI Responses API via Go backend only *(not wired yet)* |
+| AI | OpenAI Responses API via Go backend only |
 | Deployment | Docker + EC2 *(planned)* |
 
 ## What we are building in v1
@@ -54,7 +54,7 @@ See `docs/product/` for the full PRD, MVP scope, and technical design.
 interview-prep/
 ├── backend/          # Go API server
 │   ├── cmd/api/      # Application entrypoint
-│   └── internal/     # HTTP handlers, services, repositories, generated db code
+│   └── internal/     # HTTP handlers, services, repositories, AI, generated db code
 ├── db/               # Database source of truth (migrations, sqlc config, SQL queries)
 ├── docs/             # Product, strategy, and implementation docs
 │   └── progress/     # Build status and next-step prompts
@@ -65,20 +65,18 @@ interview-prep/
 
 ## Current status
 
-**In progress.** Backend foundation is running. Profile, baseline diagnosis, recovery plan, practice questions, and practice attempts APIs are implemented. Evaluations, progress, AI, and frontend are not started.
+**Backend complete through Phase 7.** All API modules, OpenAI integration, and unit/handler tests are in place. Frontend is not started.
 
 | Area | Status |
 |------|--------|
 | Product docs & schema | Done |
 | Go backend foundation | Done |
-| Profile + diagnosis APIs | Done |
-| Recovery plan API | Done |
-| Practice questions API | Done |
-| Practice attempts API | Done |
-| Evaluations, progress | Not started |
-| AI integration | Not started |
+| Profile, diagnosis, plan, questions, attempts | Done |
+| Evaluations & progress snapshots | Done |
+| AI integration (`backend/internal/ai/`) | Done |
+| Backend unit + handler tests | Done |
 | Frontend | Not started |
-| Tests & deployment | Not started |
+| Deployment | Not started |
 
 For the full checklist and next implementation step, see [`docs/progress/STATUS.md`](docs/progress/STATUS.md) and [`docs/progress/NEXT.md`](docs/progress/NEXT.md).
 
@@ -89,9 +87,9 @@ For the full checklist and next implementation step, see [`docs/progress/STATUS.
 | `GET` | `/health` | Health check |
 | `POST` | `/api/v1/profile` | Create or update profile |
 | `GET` | `/api/v1/profile` | Get profile |
-| `POST` | `/api/v1/diagnosis` | Submit baseline diagnosis |
+| `POST` | `/api/v1/diagnosis` | Submit baseline diagnosis (AI) |
 | `GET` | `/api/v1/diagnosis` | Get latest diagnosis |
-| `POST` | `/api/v1/plan` | Generate or replace active recovery plan |
+| `POST` | `/api/v1/plan` | Generate or replace active recovery plan (AI) |
 | `GET` | `/api/v1/plan` | Get active plan with tasks |
 | `GET` | `/api/v1/plan/today` | Get today's recommended task |
 | `PATCH` | `/api/v1/plan/tasks/{id}/complete` | Mark a plan task complete |
@@ -100,6 +98,11 @@ For the full checklist and next implementation step, see [`docs/progress/STATUS.
 | `POST` | `/api/v1/attempts` | Submit a practice attempt |
 | `GET` | `/api/v1/attempts` | List attempts (optional `question_id` filter) |
 | `GET` | `/api/v1/attempts/{id}` | Get a single attempt |
+| `POST` | `/api/v1/attempts/{id}/evaluate` | Evaluate an attempt (AI) |
+| `GET` | `/api/v1/attempts/{id}/evaluation` | Get evaluation for an attempt |
+| `POST` | `/api/v1/progress/snapshot` | Create daily progress snapshot (AI summary) |
+| `GET` | `/api/v1/progress/latest` | Get latest progress snapshot |
+| `GET` | `/api/v1/progress/snapshots` | List snapshots (optional `limit`, `start_date`, `end_date`) |
 
 ## Local development
 
@@ -130,7 +133,7 @@ migrate -path db/migrations -database "postgres://postgres:postgres@localhost:54
 cp backend/.env.example backend/.env
 ```
 
-Edit `backend/.env` with your `DATABASE_URL` and optionally `OPENAI_API_KEY`.
+Edit `backend/.env` with your `DATABASE_URL` and `OPENAI_API_KEY` (required for diagnosis, plan, evaluate, and progress snapshot endpoints).
 
 ### 3. Generate sqlc code (after changing SQL)
 
@@ -138,17 +141,60 @@ Edit `backend/.env` with your `DATABASE_URL` and optionally `OPENAI_API_KEY`.
 cd db && sqlc generate
 ```
 
-### 4. Run the API server
+### 4. Start the API server
+
+From the repo root:
 
 ```bash
 cd backend && go run ./cmd/api
 ```
 
-The server starts on port `8080` by default. Verify with:
+The server listens on port `8080` by default (override with `PORT` in `.env`).
+
+Verify it is running:
 
 ```bash
 curl http://localhost:8080/health
 ```
+
+Expected response when the database is connected:
+
+```json
+{"status":"ok","database":"connected"}
+```
+
+### 5. Stop the API server
+
+If the server is running in the foreground (e.g. in a terminal tab), press **`Ctrl+C`**. The server performs a graceful shutdown (drains in-flight requests, closes the DB pool).
+
+If it is running in the background, find and kill the process:
+
+```bash
+# Find the process on port 8080 (macOS)
+lsof -ti :8080 | xargs kill
+```
+
+### 6. Run tests
+
+Tests use mocked services — no PostgreSQL or OpenAI key required.
+
+```bash
+cd backend && go test ./...
+```
+
+Run with coverage:
+
+```bash
+cd backend && go test ./... -cover
+```
+
+Run a single package:
+
+```bash
+cd backend && go test ./internal/service/... -v
+```
+
+Tests cover all 19 API routes (happy path + key error statuses), service validation/business logic, and AI schema parsing.
 
 ## Build order
 

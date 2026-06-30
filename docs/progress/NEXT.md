@@ -1,7 +1,7 @@
 # Next Implementation Step
 
 **Current focus:** Phase 8 — Next.js frontend foundation  
-**Prerequisite:** Phase 7 AI prompt layer + OpenAI integration is complete.
+**Prerequisite:** Phase 7 AI integration complete; backend endpoint + service tests pass (`cd backend && go test ./...`).
 
 Use the prompt below in a new agent session. Review and test the output before moving to Phase 9 (end-to-end recovery loop).
 

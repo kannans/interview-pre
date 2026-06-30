@@ -80,8 +80,18 @@ Planning and database schema are complete. The Go backend foundation is running 
 - [ ] Next.js frontend (onboarding, diagnosis, plan, practice, mock interview, progress, settings)
 - [ ] Mock interview backend endpoints (prompts exist; service stubs only)
 - [ ] End-to-end workflow integration
-- [ ] Integration tests with mocked OpenAI
+- [ ] Integration tests against real PostgreSQL (optional CI job)
 - [ ] Deployment (Dockerfiles, docker-compose, EC2)
+
+## Testing
+
+Backend unit + handler tests (no DB/OpenAI required):
+
+```bash
+cd backend && go test ./...
+```
+
+Coverage includes all 19 API routes (happy path + key error statuses), service validation/business logic, AI schema parsing, and health handler.
 
 ## Blockers
 
