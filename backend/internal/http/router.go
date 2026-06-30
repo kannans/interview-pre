@@ -58,6 +58,11 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 	questionSvc := service.NewQuestionService(questionRepo)
 	questionHandler := handler.NewQuestionHandler(questionSvc)
 
+	// Wire up Practice Attempts module
+	attemptRepo := repository.NewAttemptRepository(queries)
+	attemptSvc := service.NewAttemptService(profileRepo, questionRepo, attemptRepo)
+	attemptHandler := handler.NewAttemptHandler(attemptSvc)
+
 	// Health Route
 	r.Get("/health", healthHandler.Check)
 
@@ -76,6 +81,10 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 
 		r.Get("/questions", questionHandler.List)
 		r.Get("/questions/{id}", questionHandler.Get)
+
+		r.Post("/attempts", attemptHandler.Submit)
+		r.Get("/attempts", attemptHandler.List)
+		r.Get("/attempts/{id}", attemptHandler.Get)
 	})
 
 	// Fallback Route for undefined paths

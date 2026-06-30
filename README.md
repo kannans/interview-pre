@@ -65,7 +65,7 @@ interview-prep/
 
 ## Current status
 
-**In progress.** Backend foundation is running. Profile, baseline diagnosis, recovery plan, and practice questions APIs are implemented. Attempts, evaluations, progress, AI, and frontend are not started.
+**In progress.** Backend foundation is running. Profile, baseline diagnosis, recovery plan, practice questions, and practice attempts APIs are implemented. Evaluations, progress, AI, and frontend are not started.
 
 | Area | Status |
 |------|--------|
@@ -74,7 +74,8 @@ interview-prep/
 | Profile + diagnosis APIs | Done |
 | Recovery plan API | Done |
 | Practice questions API | Done |
-| Attempts, evaluations, progress | Not started |
+| Practice attempts API | Done |
+| Evaluations, progress | Not started |
 | AI integration | Not started |
 | Frontend | Not started |
 | Tests & deployment | Not started |
@@ -96,6 +97,9 @@ For the full checklist and next implementation step, see [`docs/progress/STATUS.
 | `PATCH` | `/api/v1/plan/tasks/{id}/complete` | Mark a plan task complete |
 | `GET` | `/api/v1/questions` | List practice questions (optional filters) |
 | `GET` | `/api/v1/questions/{id}` | Get a single question |
+| `POST` | `/api/v1/attempts` | Submit a practice attempt |
+| `GET` | `/api/v1/attempts` | List attempts (optional `question_id` filter) |
+| `GET` | `/api/v1/attempts/{id}` | Get a single attempt |
 
 ## Local development
 

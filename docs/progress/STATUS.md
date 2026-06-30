@@ -5,7 +5,7 @@
 
 ## Summary
 
-Planning and database schema are complete. The Go backend foundation is running with Profile, Baseline Diagnosis, Recovery Plan, and Practice Questions APIs. Diagnosis and plan generation use placeholder/static logic (no OpenAI yet). Practice attempts, evaluations, progress, frontend, AI, tests, and deployment are not started.
+Planning and database schema are complete. The Go backend foundation is running with Profile, Baseline Diagnosis, Recovery Plan, Practice Questions, and Practice Attempts APIs. Diagnosis and plan generation use placeholder/static logic (no OpenAI yet). Evaluations, progress, frontend, AI, tests, and deployment are not started.
 
 ## Phase checklist
 
@@ -16,7 +16,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 | 3 | Folder structure | Partial — backend + `db/` exist; no `frontend/`, `deploy/`, or AI prompts folder |
 | 4 | PostgreSQL schema & migrations | Done |
 | 5 | Go backend foundation | Done |
-| 6 | Backend product modules | Partial (4/7) |
+| 6 | Backend product modules | Partial (5/7) |
 | 7 | AI prompt layer + OpenAI | Not started |
 | 8 | Next.js frontend | Not started |
 | 9 | End-to-end recovery loop | Not started |
@@ -33,6 +33,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 - [x] Diagnosis API: `POST` / `GET` `/api/v1/diagnosis` (placeholder AI report)
 - [x] Recovery plan API: `POST` / `GET` `/api/v1/plan`, `GET` `/api/v1/plan/today`, `PATCH` `/api/v1/plan/tasks/{id}/complete` (static plan from `weak_areas_self`)
 - [x] Practice questions API: `GET` `/api/v1/questions`, `GET` `/api/v1/questions/{id}` (15 seeded questions in `000002_seed_questions`)
+- [x] Practice attempts API: `POST` / `GET` `/api/v1/attempts`, `GET` `/api/v1/attempts/{id}`
 
 ## Backend modules (Phase 6)
 
@@ -42,7 +43,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 | Baseline diagnosis | Done | Saves answers; placeholder `diagnostic_report` JSON |
 | Recovery plan | Done | Static 7–10 tasks; replaces existing active plan on regenerate |
 | Practice questions | Done | List/get with filters; seed migration `000002_seed_questions` |
-| Practice attempts | Not started | Table exists; no API |
+| Practice attempts | Done | Submit/list/get; profile-scoped |
 | Evaluations | Not started | Table exists; no API |
 | Progress snapshots | Not started | Table exists; no API |
 
@@ -61,10 +62,12 @@ Planning and database schema are complete. The Go backend foundation is running 
 | PATCH | `/api/v1/plan/tasks/{id}/complete` | Working |
 | GET | `/api/v1/questions` | Working (optional `type`, `category`, `level` filters) |
 | GET | `/api/v1/questions/{id}` | Working |
+| POST | `/api/v1/attempts` | Working |
+| GET | `/api/v1/attempts` | Working (optional `question_id` filter) |
+| GET | `/api/v1/attempts/{id}` | Working |
 
 ## Not started
 
-- [ ] Practice attempts
 - [ ] Evaluations
 - [ ] Progress snapshots
 - [ ] AI prompt layer + OpenAI integration (`backend/internal/ai/`)
@@ -77,7 +80,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 
 - **OpenAI not wired** — blocks real diagnosis, plan generation, and attempt evaluations
 - **No frontend** — blocks personal daily use
-- **No practice attempts API** — blocks submit/evaluate flow
+- **No evaluations API** — blocks score/feedback flow after practice
 
 ## Repo layout notes
 
@@ -87,4 +90,4 @@ Planning and database schema are complete. The Go backend foundation is running 
 
 ## Recommended next step
 
-Implement the **practice attempts** backend module. See [NEXT.md](./NEXT.md) for the copy-paste prompt.
+Implement the **evaluations** backend module. See [NEXT.md](./NEXT.md) for the copy-paste prompt.

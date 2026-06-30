@@ -11,6 +11,38 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createAttempt = `-- name: CreateAttempt :one
+INSERT INTO attempts (profile_id, question_id, submitted_content, time_taken_seconds)
+VALUES ($1, $2, $3, $4)
+RETURNING id, profile_id, question_id, submitted_content, time_taken_seconds, created_at
+`
+
+type CreateAttemptParams struct {
+	ProfileID        pgtype.UUID `json:"profile_id"`
+	QuestionID       pgtype.UUID `json:"question_id"`
+	SubmittedContent string      `json:"submitted_content"`
+	TimeTakenSeconds int32       `json:"time_taken_seconds"`
+}
+
+func (q *Queries) CreateAttempt(ctx context.Context, arg CreateAttemptParams) (Attempt, error) {
+	row := q.db.QueryRow(ctx, createAttempt,
+		arg.ProfileID,
+		arg.QuestionID,
+		arg.SubmittedContent,
+		arg.TimeTakenSeconds,
+	)
+	var i Attempt
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.QuestionID,
+		&i.SubmittedContent,
+		&i.TimeTakenSeconds,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createBaselineDiagnosis = `-- name: CreateBaselineDiagnosis :one
 INSERT INTO baseline_diagnoses (profile_id, coding_answer, conceptual_answer, behavioral_answer, diagnostic_report)
 VALUES ($1, $2, $3, $4, $5)
@@ -156,6 +188,24 @@ func (q *Queries) GetActiveRecoveryPlan(ctx context.Context, profileID pgtype.UU
 	return i, err
 }
 
+const getAttempt = `-- name: GetAttempt :one
+SELECT id, profile_id, question_id, submitted_content, time_taken_seconds, created_at FROM attempts WHERE id = $1
+`
+
+func (q *Queries) GetAttempt(ctx context.Context, id pgtype.UUID) (Attempt, error) {
+	row := q.db.QueryRow(ctx, getAttempt, id)
+	var i Attempt
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.QuestionID,
+		&i.SubmittedContent,
+		&i.TimeTakenSeconds,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getBaselineDiagnosis = `-- name: GetBaselineDiagnosis :one
 SELECT id, profile_id, coding_answer, conceptual_answer, behavioral_answer, diagnostic_report, created_at FROM baseline_diagnoses WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 1
 `
@@ -295,6 +345,46 @@ func (q *Queries) HasProfile(ctx context.Context) (bool, error) {
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listAttempts = `-- name: ListAttempts :many
+SELECT id, profile_id, question_id, submitted_content, time_taken_seconds, created_at
+FROM attempts
+WHERE profile_id = $1
+  AND ($2::uuid IS NULL OR question_id = $2)
+ORDER BY created_at DESC
+`
+
+type ListAttemptsParams struct {
+	ProfileID        pgtype.UUID `json:"profile_id"`
+	FilterQuestionID pgtype.UUID `json:"filter_question_id"`
+}
+
+func (q *Queries) ListAttempts(ctx context.Context, arg ListAttemptsParams) ([]Attempt, error) {
+	rows, err := q.db.Query(ctx, listAttempts, arg.ProfileID, arg.FilterQuestionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Attempt
+	for rows.Next() {
+		var i Attempt
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProfileID,
+			&i.QuestionID,
+			&i.SubmittedContent,
+			&i.TimeTakenSeconds,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPlanTasks = `-- name: ListPlanTasks :many

@@ -87,3 +87,18 @@ ORDER BY type ASC, category ASC, level ASC, created_at ASC;
 
 -- name: GetQuestion :one
 SELECT * FROM questions WHERE id = $1;
+
+-- name: CreateAttempt :one
+INSERT INTO attempts (profile_id, question_id, submitted_content, time_taken_seconds)
+VALUES ($1, $2, $3, $4)
+RETURNING *;
+
+-- name: GetAttempt :one
+SELECT * FROM attempts WHERE id = $1;
+
+-- name: ListAttempts :many
+SELECT *
+FROM attempts
+WHERE profile_id = $1
+  AND (sqlc.narg('filter_question_id')::uuid IS NULL OR question_id = sqlc.narg('filter_question_id'))
+ORDER BY created_at DESC;

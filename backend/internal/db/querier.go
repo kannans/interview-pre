@@ -11,11 +11,13 @@ import (
 )
 
 type Querier interface {
+	CreateAttempt(ctx context.Context, arg CreateAttemptParams) (Attempt, error)
 	CreateBaselineDiagnosis(ctx context.Context, arg CreateBaselineDiagnosisParams) (BaselineDiagnosis, error)
 	CreatePlanTask(ctx context.Context, arg CreatePlanTaskParams) (PlanTask, error)
 	CreateProfile(ctx context.Context, arg CreateProfileParams) (Profile, error)
 	CreateRecoveryPlan(ctx context.Context, profileID pgtype.UUID) (RecoveryPlan, error)
 	GetActiveRecoveryPlan(ctx context.Context, profileID pgtype.UUID) (RecoveryPlan, error)
+	GetAttempt(ctx context.Context, id pgtype.UUID) (Attempt, error)
 	GetBaselineDiagnosis(ctx context.Context, profileID pgtype.UUID) (BaselineDiagnosis, error)
 	GetPlanTask(ctx context.Context, id pgtype.UUID) (PlanTask, error)
 	GetProfile(ctx context.Context) (Profile, error)
@@ -24,6 +26,7 @@ type Querier interface {
 	HasActiveRecoveryPlan(ctx context.Context, profileID pgtype.UUID) (bool, error)
 	HasBaselineDiagnosis(ctx context.Context, profileID pgtype.UUID) (bool, error)
 	HasProfile(ctx context.Context) (bool, error)
+	ListAttempts(ctx context.Context, arg ListAttemptsParams) ([]Attempt, error)
 	ListPlanTasks(ctx context.Context, planID pgtype.UUID) ([]PlanTask, error)
 	ListQuestions(ctx context.Context, arg ListQuestionsParams) ([]Question, error)
 	MarkPlanTaskComplete(ctx context.Context, arg MarkPlanTaskCompleteParams) (PlanTask, error)
