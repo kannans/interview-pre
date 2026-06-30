@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { questionsApi, attemptsApi, isApiError } from "@/lib/api";
+import { questionsApi, attemptsApi, progressApi, isApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query/keys";
 import type { AttemptInput, QuestionListFilter } from "@/lib/types/api";
 
@@ -44,11 +44,23 @@ export function useEvaluateAttempt() {
 
   return useMutation({
     mutationFn: (attemptId: string) => attemptsApi.evaluate(attemptId),
-    onSuccess: (_, attemptId) => {
+    onSuccess: async (_, attemptId) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.evaluation(attemptId),
       });
+
+      try {
+        await progressApi.createSnapshot();
+      } catch (error) {
+        if (!isApiError(error) || !error.isConflict) {
+          // Evaluation succeeded; snapshot refresh is best-effort.
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: queryKeys.progressLatest });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.progressSnapshots({}),
+      });
     },
   });
 }

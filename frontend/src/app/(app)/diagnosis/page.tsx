@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { AIErrorAlert, isAIError } from "@/components/ui/AIErrorAlert";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { useDiagnosis, useSubmitDiagnosis } from "@/hooks/useDiagnosis";
+import { useDiagnosis, useSubmitDiagnosisAndPlan } from "@/hooks/useDiagnosis";
 import { parseDiagnosticReport } from "@/lib/utils/diagnostic-report";
 import { formatCategory, formatPercent } from "@/lib/utils/format";
 import { isApiError } from "@/lib/api";
@@ -18,7 +18,7 @@ import { isApiError } from "@/lib/api";
 export default function DiagnosisPage() {
   const router = useRouter();
   const existing = useDiagnosis();
-  const submit = useSubmitDiagnosis();
+  const submit = useSubmitDiagnosisAndPlan();
 
   const [codingAnswer, setCodingAnswer] = useState("");
   const [conceptualAnswer, setConceptualAnswer] = useState("");
@@ -33,7 +33,7 @@ export default function DiagnosisPage() {
         behavioral_answer: behavioralAnswer,
       },
       {
-        onSuccess: () => router.push("/plan"),
+        onSuccess: () => router.push("/"),
       },
     );
   }
@@ -65,13 +65,15 @@ export default function DiagnosisPage() {
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
             {report.summary}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {report.weak_areas.map((area) => (
-              <Badge key={area} tone="warning">
-                {formatCategory(area)}
-              </Badge>
-            ))}
-          </div>
+          {report.weak_areas.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {report.weak_areas.map((area) => (
+                <Badge key={area} tone="warning">
+                  {formatCategory(area)}
+                </Badge>
+              ))}
+            </div>
+          )}
           <p className="mt-3 text-xs text-zinc-500">
             Recommended start: {formatCategory(report.recommended_start_level)}
           </p>

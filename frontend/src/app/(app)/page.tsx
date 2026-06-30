@@ -7,19 +7,23 @@ import {
   TodayTaskCard,
   WeakAreasPanel,
 } from "@/components/dashboard/DashboardCards";
-import { useCompleteTask, useTodayTask } from "@/hooks/usePlan";
+import { useCompleteTask } from "@/hooks/usePlan";
 import { useLatestProgress } from "@/hooks/useProgress";
 import { useDiagnosis } from "@/hooks/useDiagnosis";
+import { useRecommendedPractice } from "@/hooks/useRecommendedPractice";
 import { useWorkflowStage } from "@/hooks/useWorkflowStage";
 import { parseDiagnosticReport } from "@/lib/utils/diagnostic-report";
 import { isApiError } from "@/lib/api";
 
 export default function HomePage() {
-  const today = useTodayTask();
+  const { today, practiceHref } = useRecommendedPractice();
   const progress = useLatestProgress();
   const diagnosis = useDiagnosis();
-  const { nextAction } = useWorkflowStage();
+  const { stage, nextAction } = useWorkflowStage();
   const completeTask = useCompleteTask();
+
+  const action =
+    stage === "practice" ? { ...nextAction, href: practiceHref } : nextAction;
 
   const report = diagnosis.data
     ? parseDiagnosticReport(diagnosis.data.diagnostic_report)
@@ -45,6 +49,7 @@ export default function HomePage() {
             task={today.data?.task}
             loading={today.isLoading}
             error={todayError}
+            practiceHref={practiceHref}
             onComplete={
               today.data?.task
                 ? () => completeTask.mutate(today.data!.task.id)
@@ -69,7 +74,7 @@ export default function HomePage() {
         />
 
         <div className="lg:col-span-2">
-          <NextActionCard {...nextAction} />
+          <NextActionCard {...action} />
         </div>
       </div>
     </>

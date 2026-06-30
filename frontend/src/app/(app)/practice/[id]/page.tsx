@@ -15,6 +15,7 @@ import {
   useQuestion,
   useSubmitAttempt,
 } from "@/hooks/usePractice";
+import { useCompleteTask, useTodayTask } from "@/hooks/usePlan";
 import { useSettingsStore } from "@/lib/store/settings";
 import { formatCategory, formatLevel } from "@/lib/utils/format";
 import { isApiError } from "@/lib/api";
@@ -24,6 +25,8 @@ export default function PracticeQuestionPage() {
   const questionId = params.id;
 
   const question = useQuestion(questionId);
+  const today = useTodayTask();
+  const completeTask = useCompleteTask();
   const submitAttempt = useSubmitAttempt();
   const evaluateAttempt = useEvaluateAttempt();
   const defaultMinutes = useSettingsStore((s) => s.defaultPracticeMinutes);
@@ -64,7 +67,13 @@ export default function PracticeQuestionPage() {
         onSuccess: (attempt) => {
           setAttemptId(attempt.id);
           evaluateAttempt.mutate(attempt.id, {
-            onSuccess: (ev) => setEvaluation(ev),
+            onSuccess: (ev) => {
+              setEvaluation(ev);
+              const task = today.data?.task;
+              if (task && !task.is_completed) {
+                completeTask.mutate(task.id);
+              }
+            },
           });
         },
       },
@@ -162,6 +171,11 @@ export default function PracticeQuestionPage() {
             >
               Submit & evaluate
             </Button>
+            {evaluation && (
+              <Button variant="secondary" href="/">
+                Back to dashboard
+              </Button>
+            )}
           </form>
         </Card>
       </div>

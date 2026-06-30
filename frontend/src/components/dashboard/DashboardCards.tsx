@@ -12,6 +12,7 @@ type TodayTaskCardProps = {
   error?: string;
   onComplete?: () => void;
   completing?: boolean;
+  practiceHref?: string;
 };
 
 export function TodayTaskCard({
@@ -20,6 +21,7 @@ export function TodayTaskCard({
   error,
   onComplete,
   completing,
+  practiceHref = "/practice",
 }: TodayTaskCardProps) {
   if (loading) {
     return (
@@ -67,7 +69,7 @@ export function TodayTaskCard({
         {task.title}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" href="/practice">
+        <Button size="sm" href={practiceHref}>
           Start practice
         </Button>
         {onComplete && (

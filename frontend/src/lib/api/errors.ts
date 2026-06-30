@@ -3,6 +3,7 @@ export class ApiError extends Error {
   readonly isAIUnavailable: boolean;
   readonly isNotFound: boolean;
   readonly isPreconditionFailed: boolean;
+  readonly isConflict: boolean;
 
   constructor(status: number, message: string) {
     super(message);
@@ -11,6 +12,7 @@ export class ApiError extends Error {
     this.isAIUnavailable = status === 502;
     this.isNotFound = status === 404;
     this.isPreconditionFailed = status === 412;
+    this.isConflict = status === 409;
   }
 }
 
