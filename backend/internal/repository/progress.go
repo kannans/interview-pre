@@ -25,6 +25,7 @@ type EvaluationStats struct {
 
 type ProgressRepository interface {
 	Create(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date, stats []byte) (db.ProgressSnapshot, error)
+	Update(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date, stats []byte) (db.ProgressSnapshot, error)
 	GetLatest(ctx context.Context, profileID pgtype.UUID) (db.ProgressSnapshot, error)
 	GetByID(ctx context.Context, id pgtype.UUID) (db.ProgressSnapshot, error)
 	GetByProfileAndDate(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date) (db.ProgressSnapshot, error)
@@ -49,6 +50,18 @@ func (r *progressRepository) Create(ctx context.Context, profileID pgtype.UUID, 
 	})
 	if err != nil {
 		return db.ProgressSnapshot{}, fmt.Errorf("failed to create progress snapshot: %w", err)
+	}
+	return snapshot, nil
+}
+
+func (r *progressRepository) Update(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date, stats []byte) (db.ProgressSnapshot, error) {
+	snapshot, err := r.queries.UpdateProgressSnapshot(ctx, db.UpdateProgressSnapshotParams{
+		ProfileID:    profileID,
+		SnapshotDate: snapshotDate,
+		Stats:        stats,
+	})
+	if err != nil {
+		return db.ProgressSnapshot{}, fmt.Errorf("failed to update progress snapshot: %w", err)
 	}
 	return snapshot, nil
 }

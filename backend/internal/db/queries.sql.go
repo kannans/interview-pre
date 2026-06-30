@@ -838,3 +838,29 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 	)
 	return i, err
 }
+
+const updateProgressSnapshot = `-- name: UpdateProgressSnapshot :one
+UPDATE progress_snapshots
+SET stats = $3
+WHERE profile_id = $1 AND snapshot_date = $2
+RETURNING id, profile_id, snapshot_date, stats, created_at
+`
+
+type UpdateProgressSnapshotParams struct {
+	ProfileID    pgtype.UUID `json:"profile_id"`
+	SnapshotDate pgtype.Date `json:"snapshot_date"`
+	Stats        []byte      `json:"stats"`
+}
+
+func (q *Queries) UpdateProgressSnapshot(ctx context.Context, arg UpdateProgressSnapshotParams) (ProgressSnapshot, error) {
+	row := q.db.QueryRow(ctx, updateProgressSnapshot, arg.ProfileID, arg.SnapshotDate, arg.Stats)
+	var i ProgressSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.SnapshotDate,
+		&i.Stats,
+		&i.CreatedAt,
+	)
+	return i, err
+}

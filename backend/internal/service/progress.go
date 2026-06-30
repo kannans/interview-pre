@@ -102,13 +102,6 @@ func (s *progressService) CreateSnapshot(ctx context.Context) (ProgressSnapshotR
 	}
 
 	snapshotDate := todayDate()
-	_, err = s.progressRepo.GetByProfileAndDate(ctx, profile.ID, snapshotDate)
-	if err == nil {
-		return ProgressSnapshotResponse{}, ErrProgressSnapshotAlreadyExists
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return ProgressSnapshotResponse{}, fmt.Errorf("failed to check existing snapshot: %w", err)
-	}
 
 	stats, err := s.computeStats(ctx, profile)
 	if err != nil {
@@ -118,6 +111,18 @@ func (s *progressService) CreateSnapshot(ctx context.Context) (ProgressSnapshotR
 	statsJSON, err := json.Marshal(stats)
 	if err != nil {
 		return ProgressSnapshotResponse{}, fmt.Errorf("failed to marshal snapshot stats: %w", err)
+	}
+
+	_, err = s.progressRepo.GetByProfileAndDate(ctx, profile.ID, snapshotDate)
+	if err == nil {
+		snapshot, err := s.progressRepo.Update(ctx, profile.ID, snapshotDate, statsJSON)
+		if err != nil {
+			return ProgressSnapshotResponse{}, fmt.Errorf("failed to refresh progress snapshot: %w", err)
+		}
+		return toProgressSnapshotResponse(snapshot, stats), nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return ProgressSnapshotResponse{}, fmt.Errorf("failed to check existing snapshot: %w", err)
 	}
 
 	snapshot, err := s.progressRepo.Create(ctx, profile.ID, snapshotDate, statsJSON)

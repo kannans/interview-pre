@@ -3,7 +3,6 @@ package service_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -111,20 +110,40 @@ func TestProgressCreateSnapshotDegradedOnAIFailure(t *testing.T) {
 	}
 }
 
-func TestProgressCreateSnapshotDuplicate(t *testing.T) {
+func TestProgressCreateSnapshotRefreshesExisting(t *testing.T) {
 	profileID := testutil.MustUUID(t, testutil.TestUUID)
 	profileRepo := &testutil.MockProfileRepository{
 		GetFn: func(context.Context) (db.Profile, error) { return testutil.SampleProfile(profileID), nil },
 	}
+	planRepo := &testutil.MockPlanRepository{
+		GetActiveFn: func(context.Context, pgtype.UUID) (db.RecoveryPlan, error) {
+			return db.RecoveryPlan{}, pgx.ErrNoRows
+		},
+	}
 	progressRepo := &testutil.MockProgressRepository{
 		GetByProfileAndDateFn: func(context.Context, pgtype.UUID, pgtype.Date) (db.ProgressSnapshot, error) {
-			return db.ProgressSnapshot{}, nil
+			return db.ProgressSnapshot{ID: profileID}, nil
+		},
+		CountAttemptsFn:      func(context.Context, pgtype.UUID) (int32, error) { return 2, nil },
+		GetEvaluationStatsFn: func(context.Context, pgtype.UUID) (repository.EvaluationStats, error) { return repository.EvaluationStats{EvaluationsCount: 1}, nil },
+		UpdateFn: func(_ context.Context, _ pgtype.UUID, _ pgtype.Date, stats []byte) (db.ProgressSnapshot, error) {
+			return db.ProgressSnapshot{ID: profileID, Stats: stats}, nil
+		},
+	}
+	aiSvc := &testutil.MockAIService{
+		SummarizeWeeklyProgressFn: func(context.Context, ai.WeeklyProgressInput) (ai.AIResult[ai.WeeklyProgressOutput], error) {
+			return ai.AIResult[ai.WeeklyProgressOutput]{
+				Data: ai.WeeklyProgressOutput{WeeklySummary: "Updated"},
+			}, nil
 		},
 	}
 
-	_, err := service.NewProgressService(profileRepo, &testutil.MockPlanRepository{}, progressRepo, &testutil.MockAIService{}).CreateSnapshot(context.Background())
-	if !errors.Is(err, service.ErrProgressSnapshotAlreadyExists) {
-		t.Fatalf("expected ErrProgressSnapshotAlreadyExists, got %v", err)
+	resp, err := service.NewProgressService(profileRepo, planRepo, progressRepo, aiSvc).CreateSnapshot(context.Background())
+	if err != nil {
+		t.Fatalf("expected refresh without error, got %v", err)
+	}
+	if resp.Stats.AttemptsCount != 2 {
+		t.Fatalf("attempts_count = %d", resp.Stats.AttemptsCount)
 	}
 }
 

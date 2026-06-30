@@ -295,15 +295,17 @@ func TestEndpointErrorResponses(t *testing.T) {
 		testutil.AssertStatus(t, rec, http.StatusConflict)
 	})
 
-	t.Run("POST /progress/snapshot duplicate 409", func(t *testing.T) {
+	t.Run("POST /progress/snapshot refresh existing 200", func(t *testing.T) {
 		svc := base
 		svc.progress = &testutil.MockProgressService{
 			CreateSnapshotFn: func(_ context.Context) (service.ProgressSnapshotResponse, error) {
-				return service.ProgressSnapshotResponse{}, service.ErrProgressSnapshotAlreadyExists
+				return service.ProgressSnapshotResponse{
+					Stats: service.SnapshotStats{AttemptsCount: 3, Status: "complete"},
+				}, nil
 			},
 		}
 		rec := testutil.DoRequest(t, newTestRouter(svc), testutil.JSONRequest(http.MethodPost, "/api/v1/progress/snapshot", nil))
-		testutil.AssertStatus(t, rec, http.StatusConflict)
+		testutil.AssertStatus(t, rec, http.StatusCreated)
 	})
 
 	t.Run("GET /progress/latest not found 404", func(t *testing.T) {

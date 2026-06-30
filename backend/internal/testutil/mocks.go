@@ -239,6 +239,7 @@ func (m *MockPlanRepository) ReplacePlanWithTasks(ctx context.Context, profileID
 
 type MockProgressRepository struct {
 	CreateFn              func(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date, stats []byte) (db.ProgressSnapshot, error)
+	UpdateFn              func(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date, stats []byte) (db.ProgressSnapshot, error)
 	GetLatestFn           func(ctx context.Context, profileID pgtype.UUID) (db.ProgressSnapshot, error)
 	GetByIDFn             func(ctx context.Context, id pgtype.UUID) (db.ProgressSnapshot, error)
 	GetByProfileAndDateFn func(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date) (db.ProgressSnapshot, error)
@@ -249,6 +250,12 @@ type MockProgressRepository struct {
 
 func (m *MockProgressRepository) Create(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date, stats []byte) (db.ProgressSnapshot, error) {
 	return m.CreateFn(ctx, profileID, snapshotDate, stats)
+}
+func (m *MockProgressRepository) Update(ctx context.Context, profileID pgtype.UUID, snapshotDate pgtype.Date, stats []byte) (db.ProgressSnapshot, error) {
+	if m.UpdateFn != nil {
+		return m.UpdateFn(ctx, profileID, snapshotDate, stats)
+	}
+	return db.ProgressSnapshot{Stats: stats}, nil
 }
 func (m *MockProgressRepository) GetLatest(ctx context.Context, profileID pgtype.UUID) (db.ProgressSnapshot, error) {
 	return m.GetLatestFn(ctx, profileID)

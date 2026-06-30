@@ -42,6 +42,7 @@ type Querier interface {
 	MarkPlanTaskComplete(ctx context.Context, arg MarkPlanTaskCompleteParams) (PlanTask, error)
 	SupersedeActiveRecoveryPlan(ctx context.Context, profileID pgtype.UUID) error
 	UpdateProfile(ctx context.Context, arg UpdateProfileParams) (Profile, error)
+	UpdateProgressSnapshot(ctx context.Context, arg UpdateProgressSnapshotParams) (ProgressSnapshot, error)
 }
 
 var _ Querier = (*Queries)(nil)

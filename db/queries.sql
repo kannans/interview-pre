@@ -130,6 +130,12 @@ INSERT INTO progress_snapshots (profile_id, snapshot_date, stats)
 VALUES ($1, $2, $3)
 RETURNING *;
 
+-- name: UpdateProgressSnapshot :one
+UPDATE progress_snapshots
+SET stats = $3
+WHERE profile_id = $1 AND snapshot_date = $2
+RETURNING *;
+
 -- name: GetLatestProgressSnapshot :one
 SELECT * FROM progress_snapshots
 WHERE profile_id = $1

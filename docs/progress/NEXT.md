@@ -1,53 +1,47 @@
 # Next Implementation Step
 
-**Current focus:** Phase 9 — End-to-end recovery workflow  
-**Prerequisite:** Phase 8 frontend foundation complete; backend tests pass (`cd backend && go test ./...`); frontend builds (`cd frontend && npm run build`).
+**Current focus:** Phase 10 — Testing and review  
+**Prerequisite:** Phase 9 end-to-end recovery loop wired; backend tests pass (`cd backend && go test ./...`); frontend builds (`cd frontend && npm run build`).
 
-Use the prompt below in a new agent session. Review and test the output before moving to Phase 10 (testing and review).
+Use the prompt below in a new agent session. Review and test the output before moving to Phase 11 (deployment).
 
 ---
 
-## Copy-paste prompt: End-to-end recovery workflow
+## Copy-paste prompt: Testing and review
 
 ```text
-Connect the frontend and backend into the full personal recovery loop.
+Review the end-to-end recovery loop for correctness, gaps, and error handling.
 
 The loop is:
 profile -> diagnosis -> plan -> practice -> evaluate -> progress -> adjust
 
-Implement or verify:
-1. profile creation saves correctly
-2. baseline diagnosis can be submitted
-3. diagnosis result creates or updates recovery plan
-4. user can start today's practice
-5. user can submit answer or code
-6. backend evaluates attempt
-7. evaluation is saved
-8. progress dashboard updates
-9. next recommended task is shown
+Verify and fix as needed:
+1. backend API correctness (status codes, validation, edge cases)
+2. AI response parsing and degraded-mode fallbacks
+3. frontend integration (hooks, cache invalidation, workflow stage)
+4. progress snapshot refresh after evaluation
+5. workflow transitions when today's task is complete or plan is exhausted
 
 Return:
-1. files changed
-2. integration flow summary
-3. API calls used by each page
-4. data persisted at each step
-5. remaining gaps
-6. manual test checklist
+1. issues found and fixes applied
+2. manual test checklist with pass/fail notes
+3. remaining gaps before deployment
+4. recommended follow-ups
 
 Rules:
 - Do not add new feature scope.
-- Focus on making the core loop reliable.
+- Focus on reliability, error handling, and test coverage for the core loop.
 ```
 
 ---
 
-## After end-to-end integration
+## After testing and review
 
-Phase 9 wires the full loop. Proceed to **Phase 10 — Testing and review** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
+Phase 10 validates the full loop. Proceed to **Phase 11 — EC2 / Docker deployment** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
 
-1. Review backend API correctness, AI parsing, and frontend integration
-2. Fix workflow gaps and error handling
-3. Document findings before deployment (Phase 11)
+1. Add Dockerfiles and docker-compose for API + Postgres
+2. Document environment variables and deployment steps
+3. Smoke-test the deployed stack
 
 ## Local dev (frontend + backend)
 
