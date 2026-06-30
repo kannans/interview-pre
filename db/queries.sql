@@ -124,3 +124,44 @@ SELECT * FROM evaluations WHERE attempt_id = $1;
 
 -- name: GetEvaluationByID :one
 SELECT * FROM evaluations WHERE id = $1;
+
+-- name: CreateProgressSnapshot :one
+INSERT INTO progress_snapshots (profile_id, snapshot_date, stats)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: GetLatestProgressSnapshot :one
+SELECT * FROM progress_snapshots
+WHERE profile_id = $1
+ORDER BY snapshot_date DESC
+LIMIT 1;
+
+-- name: GetProgressSnapshotByID :one
+SELECT * FROM progress_snapshots WHERE id = $1;
+
+-- name: GetProgressSnapshotByProfileAndDate :one
+SELECT * FROM progress_snapshots
+WHERE profile_id = $1 AND snapshot_date = $2;
+
+-- name: ListProgressSnapshots :many
+SELECT *
+FROM progress_snapshots
+WHERE profile_id = $1
+  AND (sqlc.narg('filter_start_date')::date IS NULL OR snapshot_date >= sqlc.narg('filter_start_date')::date)
+  AND (sqlc.narg('filter_end_date')::date IS NULL OR snapshot_date <= sqlc.narg('filter_end_date')::date)
+ORDER BY snapshot_date DESC
+LIMIT COALESCE(sqlc.narg('row_limit')::int, 100);
+
+-- name: CountAttemptsByProfile :one
+SELECT COUNT(*)::int AS count FROM attempts WHERE profile_id = $1;
+
+-- name: GetEvaluationStatsForProfile :one
+SELECT
+    COUNT(e.id)::int AS evaluations_count,
+    COALESCE(AVG(e.score_correctness), 0)::float8 AS avg_correctness,
+    COALESCE(AVG(e.score_approach), 0)::float8 AS avg_approach,
+    COALESCE(AVG(e.score_edge_cases), 0)::float8 AS avg_edge_cases,
+    COALESCE(AVG(e.score_communication), 0)::float8 AS avg_communication
+FROM attempts a
+INNER JOIN evaluations e ON e.attempt_id = a.id
+WHERE a.profile_id = $1;

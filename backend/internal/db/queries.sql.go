@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAttemptsByProfile = `-- name: CountAttemptsByProfile :one
+SELECT COUNT(*)::int AS count FROM attempts WHERE profile_id = $1
+`
+
+func (q *Queries) CountAttemptsByProfile(ctx context.Context, profileID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countAttemptsByProfile, profileID)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAttempt = `-- name: CreateAttempt :one
 INSERT INTO attempts (profile_id, question_id, submitted_content, time_taken_seconds)
 VALUES ($1, $2, $3, $4)
@@ -212,6 +223,31 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 	return i, err
 }
 
+const createProgressSnapshot = `-- name: CreateProgressSnapshot :one
+INSERT INTO progress_snapshots (profile_id, snapshot_date, stats)
+VALUES ($1, $2, $3)
+RETURNING id, profile_id, snapshot_date, stats, created_at
+`
+
+type CreateProgressSnapshotParams struct {
+	ProfileID    pgtype.UUID `json:"profile_id"`
+	SnapshotDate pgtype.Date `json:"snapshot_date"`
+	Stats        []byte      `json:"stats"`
+}
+
+func (q *Queries) CreateProgressSnapshot(ctx context.Context, arg CreateProgressSnapshotParams) (ProgressSnapshot, error) {
+	row := q.db.QueryRow(ctx, createProgressSnapshot, arg.ProfileID, arg.SnapshotDate, arg.Stats)
+	var i ProgressSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.SnapshotDate,
+		&i.Stats,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createRecoveryPlan = `-- name: CreateRecoveryPlan :one
 INSERT INTO recovery_plans (profile_id, status)
 VALUES ($1, 'active')
@@ -334,6 +370,59 @@ func (q *Queries) GetEvaluationByID(ctx context.Context, id pgtype.UUID) (Evalua
 	return i, err
 }
 
+const getEvaluationStatsForProfile = `-- name: GetEvaluationStatsForProfile :one
+SELECT
+    COUNT(e.id)::int AS evaluations_count,
+    COALESCE(AVG(e.score_correctness), 0)::float8 AS avg_correctness,
+    COALESCE(AVG(e.score_approach), 0)::float8 AS avg_approach,
+    COALESCE(AVG(e.score_edge_cases), 0)::float8 AS avg_edge_cases,
+    COALESCE(AVG(e.score_communication), 0)::float8 AS avg_communication
+FROM attempts a
+INNER JOIN evaluations e ON e.attempt_id = a.id
+WHERE a.profile_id = $1
+`
+
+type GetEvaluationStatsForProfileRow struct {
+	EvaluationsCount int32   `json:"evaluations_count"`
+	AvgCorrectness   float64 `json:"avg_correctness"`
+	AvgApproach      float64 `json:"avg_approach"`
+	AvgEdgeCases     float64 `json:"avg_edge_cases"`
+	AvgCommunication float64 `json:"avg_communication"`
+}
+
+func (q *Queries) GetEvaluationStatsForProfile(ctx context.Context, profileID pgtype.UUID) (GetEvaluationStatsForProfileRow, error) {
+	row := q.db.QueryRow(ctx, getEvaluationStatsForProfile, profileID)
+	var i GetEvaluationStatsForProfileRow
+	err := row.Scan(
+		&i.EvaluationsCount,
+		&i.AvgCorrectness,
+		&i.AvgApproach,
+		&i.AvgEdgeCases,
+		&i.AvgCommunication,
+	)
+	return i, err
+}
+
+const getLatestProgressSnapshot = `-- name: GetLatestProgressSnapshot :one
+SELECT id, profile_id, snapshot_date, stats, created_at FROM progress_snapshots
+WHERE profile_id = $1
+ORDER BY snapshot_date DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestProgressSnapshot(ctx context.Context, profileID pgtype.UUID) (ProgressSnapshot, error) {
+	row := q.db.QueryRow(ctx, getLatestProgressSnapshot, profileID)
+	var i ProgressSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.SnapshotDate,
+		&i.Stats,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getPlanTask = `-- name: GetPlanTask :one
 SELECT id, plan_id, category, level, title, sequence_order, is_completed, completed_at, created_at FROM plan_tasks WHERE id = $1
 `
@@ -371,6 +460,46 @@ func (q *Queries) GetProfile(ctx context.Context) (Profile, error) {
 		&i.Timeline,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProgressSnapshotByID = `-- name: GetProgressSnapshotByID :one
+SELECT id, profile_id, snapshot_date, stats, created_at FROM progress_snapshots WHERE id = $1
+`
+
+func (q *Queries) GetProgressSnapshotByID(ctx context.Context, id pgtype.UUID) (ProgressSnapshot, error) {
+	row := q.db.QueryRow(ctx, getProgressSnapshotByID, id)
+	var i ProgressSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.SnapshotDate,
+		&i.Stats,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getProgressSnapshotByProfileAndDate = `-- name: GetProgressSnapshotByProfileAndDate :one
+SELECT id, profile_id, snapshot_date, stats, created_at FROM progress_snapshots
+WHERE profile_id = $1 AND snapshot_date = $2
+`
+
+type GetProgressSnapshotByProfileAndDateParams struct {
+	ProfileID    pgtype.UUID `json:"profile_id"`
+	SnapshotDate pgtype.Date `json:"snapshot_date"`
+}
+
+func (q *Queries) GetProgressSnapshotByProfileAndDate(ctx context.Context, arg GetProgressSnapshotByProfileAndDateParams) (ProgressSnapshot, error) {
+	row := q.db.QueryRow(ctx, getProgressSnapshotByProfileAndDate, arg.ProfileID, arg.SnapshotDate)
+	var i ProgressSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.SnapshotDate,
+		&i.Stats,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -520,6 +649,54 @@ func (q *Queries) ListPlanTasks(ctx context.Context, planID pgtype.UUID) ([]Plan
 			&i.SequenceOrder,
 			&i.IsCompleted,
 			&i.CompletedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProgressSnapshots = `-- name: ListProgressSnapshots :many
+SELECT id, profile_id, snapshot_date, stats, created_at
+FROM progress_snapshots
+WHERE profile_id = $1
+  AND ($2::date IS NULL OR snapshot_date >= $2::date)
+  AND ($3::date IS NULL OR snapshot_date <= $3::date)
+ORDER BY snapshot_date DESC
+LIMIT COALESCE($4::int, 100)
+`
+
+type ListProgressSnapshotsParams struct {
+	ProfileID       pgtype.UUID `json:"profile_id"`
+	FilterStartDate pgtype.Date `json:"filter_start_date"`
+	FilterEndDate   pgtype.Date `json:"filter_end_date"`
+	RowLimit        pgtype.Int4 `json:"row_limit"`
+}
+
+func (q *Queries) ListProgressSnapshots(ctx context.Context, arg ListProgressSnapshotsParams) ([]ProgressSnapshot, error) {
+	rows, err := q.db.Query(ctx, listProgressSnapshots,
+		arg.ProfileID,
+		arg.FilterStartDate,
+		arg.FilterEndDate,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProgressSnapshot
+	for rows.Next() {
+		var i ProgressSnapshot
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProfileID,
+			&i.SnapshotDate,
+			&i.Stats,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

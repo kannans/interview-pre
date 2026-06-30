@@ -1,87 +1,84 @@
 # Next Implementation Step
 
-**Current focus:** Phase 6 — Progress snapshots module  
-**Prerequisite:** Profile, baseline diagnosis, recovery plan, practice questions, practice attempts, and evaluations modules are complete.
+**Current focus:** Phase 7 — AI prompt layer + OpenAI integration  
+**Prerequisite:** All Phase 6 backend modules are complete (profile through progress snapshots).
 
-Use the prompt below in a new agent session. Review and test the output before moving to Phase 7 (AI prompt layer).
+Use the prompt below in a new agent session. Review and test the output before moving to Phase 8 (Next.js frontend).
 
 ---
 
-## Copy-paste prompt: Progress snapshots module
+## Copy-paste prompt: AI prompt layer + OpenAI integration
 
 ```text
-Implement the progress snapshots backend module for Interview Preparation Coach.
+Build the AI prompt layer for Interview Preparation Coach.
 
 Context:
 - Personal-first interview recovery app for experienced engineers.
 - Stack: Go + Chi + pgx + sqlc + PostgreSQL.
 - Core loop: profile -> diagnosis -> plan -> practice -> evaluate -> progress -> adjust.
-- Profile, baseline diagnosis, recovery plan, practice questions, practice attempts, and evaluations modules are already implemented.
-- Evaluations API: POST /api/v1/attempts/{id}/evaluate, GET /api/v1/attempts/{id}/evaluation.
+- All Phase 6 backend modules are implemented with placeholder logic (no real OpenAI calls yet).
+- Progress snapshots API: POST /api/v1/progress/snapshot, GET /api/v1/progress/latest, GET /api/v1/progress/snapshots.
 
-Existing schema (already migrated):
-- progress_snapshots (id, profile_id, snapshot_date, stats JSONB, created_at)
-- UNIQUE(profile_id, snapshot_date)
-
-Existing API patterns to follow:
-- backend/internal/repository/ — database access via sqlc queries
-- backend/internal/service/ — business logic and validation
-- backend/internal/http/handler/ — thin HTTP handlers
-- backend/internal/http/router.go — wire new routes under /api/v1
+Existing placeholder modules to replace (Phase 7 wiring):
+- Diagnosis: placeholder diagnostic_report JSON in backend/internal/service/diagnosis.go
+- Plan: static task derivation in backend/internal/service/plan.go
+- Evaluations: placeholder scoring in backend/internal/service/evaluation.go
+- Progress: placeholder stats aggregation in backend/internal/service/progress.go (status: "pending_ai_summary")
 
 Task:
-Implement the progress snapshots module only. Do not implement frontend, real OpenAI calls, or weekly AI summaries yet.
+Implement the AI prompt layer and OpenAI integration only. Do not build frontend.
 
 Requirements:
-1. Add sqlc queries in db/queries.sql for:
-   - Create progress snapshot (linked to profile_id + snapshot_date)
-   - Get latest progress snapshot for profile
-   - Get progress snapshot by id
-   - List progress snapshots for profile (optional date range or limit)
+1. Create backend/internal/ai/ with:
+   - OpenAI Responses API client wrapper
+   - AI service interface used by domain services
+   - Config from OPENAI_API_KEY (already in backend/.env.example)
 
-2. Regenerate sqlc output (document the command).
+2. Create versioned prompt files (e.g. backend/internal/ai/prompts/) for:
+   - baseline diagnosis
+   - recovery plan generation
+   - basic programming evaluation
+   - DSA evaluation
+   - technical answer evaluation
+   - mock interview question generation (stub OK if no API yet)
+   - mock interview grading (stub OK if no API yet)
+   - weekly progress summary
 
-3. Implement repository, service, and handler layers matching existing module style.
+3. For each prompt document: file name, system instruction, user input shape, required JSON output schema, example input/output.
 
-4. API endpoints (suggest and implement):
-   - POST /api/v1/progress/snapshot — compute and store today's snapshot from attempts + evaluations + plan task completion
-   - GET /api/v1/progress/latest — get most recent snapshot for current profile
-   - GET /api/v1/progress/snapshots — list snapshots (optional limit)
+4. Wire AI service into existing modules:
+   - Diagnosis Submit -> real diagnostic_report
+   - Plan Generate -> AI-driven tasks from diagnostic_report
+   - Evaluation Evaluate -> real scores and feedback
+   - Progress CreateSnapshot -> enrich stats with weekly AI summary; set status to "complete"
 
-5. Placeholder stats logic (store in stats JSONB):
-   - attempts_count, evaluations_count, average_scores (correctness, approach, edge_cases, communication)
-   - plan_tasks_completed, plan_tasks_total
-   - readiness_index (0–100 weighted placeholder from available data)
-   - weak_patterns (placeholder array derived from lowest evaluation dimensions)
-   - status: "pending_ai_summary" until Phase 7
+5. Operational concerns:
+   - Prompt versioning strategy (filename or embedded version field)
+   - Logging: prompt version, model, latency, token usage where available
+   - Fallback behavior if AI call fails (graceful error or degraded placeholder — document choice)
+   - Strict JSON parsing with validation
 
-6. Validation and errors:
-   - Profile must exist
-   - Return 404 when no snapshot exists yet (for GET latest)
-   - Return 409 if snapshot already exists for today (or upsert — pick one and document)
-   - All snapshots scoped to current profile
+Rules:
+- AI must never be called directly from the frontend.
+- JSON output must be strict and parseable.
+- Feedback must be practical, direct, and non-generic.
+- Match existing backend conventions (repository/service/handler layers).
+- Do not build Next.js frontend in this phase.
 
 Return:
 1. Files created or changed
-2. New API request/response JSON examples
-3. sqlc regenerate command
-4. How to test manually (curl examples)
-5. What is left for Phase 7 (AI prompt layer)
-
-Rules:
-- Implement one module only.
-- Keep handlers thin; business logic in services.
-- Match existing code conventions in backend/.
-- Do not call OpenAI yet — use placeholder aggregation logic.
-- Do not build frontend.
+2. AI service interface and client design
+3. Prompt versioning and logging strategy
+4. How to test manually (curl examples for diagnosis, plan, evaluate, progress)
+5. What is left for Phase 8 (frontend)
 ```
 
 ---
 
-## After progress snapshots
+## After AI integration
 
-Phase 6 backend modules are complete. Proceed to **Phase 7 — AI prompt layer + OpenAI integration** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
+Phase 7 completes the backend intelligence layer. Proceed to **Phase 8 — Next.js frontend foundation** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
 
-1. Versioned prompts for diagnosis, plan generation, attempt evaluation, and weekly summaries
-2. `backend/internal/ai/` service with OpenAI client wrapper
-3. Replace placeholder logic in diagnosis, plan, evaluations, and progress modules
+1. Onboarding/profile, diagnosis, plan, daily practice, mock interview, progress dashboard, settings
+2. API client layer against existing `/api/v1` contracts
+3. Loading and error states; responsive layout focused on today's task and weak areas

@@ -5,7 +5,7 @@
 
 ## Summary
 
-Planning and database schema are complete. The Go backend foundation is running with Profile, Baseline Diagnosis, Recovery Plan, Practice Questions, Practice Attempts, and Evaluations APIs. Diagnosis, plan generation, and evaluations use placeholder/static logic (no OpenAI yet). Progress snapshots, frontend, AI, tests, and deployment are not started.
+Planning and database schema are complete. The Go backend foundation is running with all Phase 6 product modules: Profile, Baseline Diagnosis, Recovery Plan, Practice Questions, Practice Attempts, Evaluations, and Progress Snapshots. Diagnosis, plan generation, evaluations, and progress stats use placeholder/static logic (no OpenAI yet). Frontend, AI integration, tests, and deployment are not started.
 
 ## Phase checklist
 
@@ -16,7 +16,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 | 3 | Folder structure | Partial — backend + `db/` exist; no `frontend/`, `deploy/`, or AI prompts folder |
 | 4 | PostgreSQL schema & migrations | Done |
 | 5 | Go backend foundation | Done |
-| 6 | Backend product modules | Partial (6/7) |
+| 6 | Backend product modules | Done (7/7) |
 | 7 | AI prompt layer + OpenAI | Not started |
 | 8 | Next.js frontend | Not started |
 | 9 | End-to-end recovery loop | Not started |
@@ -35,6 +35,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 - [x] Practice questions API: `GET` `/api/v1/questions`, `GET` `/api/v1/questions/{id}` (15 seeded questions in `000002_seed_questions`)
 - [x] Practice attempts API: `POST` / `GET` `/api/v1/attempts`, `GET` `/api/v1/attempts/{id}`
 - [x] Evaluations API: `POST` `/api/v1/attempts/{id}/evaluate`, `GET` `/api/v1/attempts/{id}/evaluation` (placeholder scoring)
+- [x] Progress snapshots API: `POST` `/api/v1/progress/snapshot`, `GET` `/api/v1/progress/latest`, `GET` `/api/v1/progress/snapshots` (placeholder stats; one snapshot per day)
 
 ## Backend modules (Phase 6)
 
@@ -46,7 +47,7 @@ Planning and database schema are complete. The Go backend foundation is running 
 | Practice questions | Done | List/get with filters; seed migration `000002_seed_questions` |
 | Practice attempts | Done | Submit/list/get; profile-scoped |
 | Evaluations | Done | Placeholder scores/feedback; one per attempt; profile-scoped |
-| Progress snapshots | Not started | Table exists; no API |
+| Progress snapshots | Done | Daily snapshot with placeholder readiness index; 409 if already exists for today |
 
 ## API surface today
 
@@ -68,10 +69,12 @@ Planning and database schema are complete. The Go backend foundation is running 
 | GET | `/api/v1/attempts/{id}` | Working |
 | POST | `/api/v1/attempts/{id}/evaluate` | Working (placeholder scoring) |
 | GET | `/api/v1/attempts/{id}/evaluation` | Working |
+| POST | `/api/v1/progress/snapshot` | Working (placeholder stats) |
+| GET | `/api/v1/progress/latest` | Working |
+| GET | `/api/v1/progress/snapshots` | Working (optional `limit`, `start_date`, `end_date`) |
 
 ## Not started
 
-- [ ] Progress snapshots
 - [ ] AI prompt layer + OpenAI integration (`backend/internal/ai/`)
 - [ ] Next.js frontend (onboarding, diagnosis, plan, practice, mock interview, progress, settings)
 - [ ] End-to-end workflow integration
@@ -80,9 +83,8 @@ Planning and database schema are complete. The Go backend foundation is running 
 
 ## Blockers
 
-- **OpenAI not wired** — blocks real diagnosis, plan generation, and attempt evaluations
+- **OpenAI not wired** — blocks real diagnosis, plan generation, attempt evaluations, and weekly progress summaries
 - **No frontend** — blocks personal daily use
-- **No progress snapshots API** — blocks readiness tracking and weekly trends
 
 ## Repo layout notes
 
@@ -92,4 +94,4 @@ Planning and database schema are complete. The Go backend foundation is running 
 
 ## Recommended next step
 
-Implement the **progress snapshots** backend module. See [NEXT.md](./NEXT.md) for the copy-paste prompt.
+Implement the **AI prompt layer + OpenAI integration**. See [NEXT.md](./NEXT.md) for the copy-paste prompt.

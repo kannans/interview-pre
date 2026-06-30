@@ -68,6 +68,11 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 	evaluationSvc := service.NewEvaluationService(profileRepo, attemptRepo, questionRepo, evaluationRepo)
 	evaluationHandler := handler.NewEvaluationHandler(evaluationSvc)
 
+	// Wire up Progress Snapshots module
+	progressRepo := repository.NewProgressRepository(queries)
+	progressSvc := service.NewProgressService(profileRepo, planRepo, progressRepo)
+	progressHandler := handler.NewProgressHandler(progressSvc)
+
 	// Health Route
 	r.Get("/health", healthHandler.Check)
 
@@ -92,6 +97,10 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 		r.Post("/attempts/{id}/evaluate", evaluationHandler.Evaluate)
 		r.Get("/attempts/{id}/evaluation", evaluationHandler.GetByAttempt)
 		r.Get("/attempts/{id}", attemptHandler.Get)
+
+		r.Post("/progress/snapshot", progressHandler.CreateSnapshot)
+		r.Get("/progress/latest", progressHandler.GetLatest)
+		r.Get("/progress/snapshots", progressHandler.ListSnapshots)
 	})
 
 	// Fallback Route for undefined paths
