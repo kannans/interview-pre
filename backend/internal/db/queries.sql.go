@@ -78,6 +78,67 @@ func (q *Queries) CreateBaselineDiagnosis(ctx context.Context, arg CreateBaselin
 	return i, err
 }
 
+const createEvaluation = `-- name: CreateEvaluation :one
+INSERT INTO evaluations (
+    attempt_id,
+    score_correctness,
+    score_approach,
+    score_edge_cases,
+    score_communication,
+    feedback_correctness,
+    feedback_approach,
+    feedback_edge_cases,
+    feedback_communication,
+    raw_ai_response
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, attempt_id, score_correctness, score_approach, score_edge_cases, score_communication, feedback_correctness, feedback_approach, feedback_edge_cases, feedback_communication, raw_ai_response, created_at
+`
+
+type CreateEvaluationParams struct {
+	AttemptID             pgtype.UUID `json:"attempt_id"`
+	ScoreCorrectness      int32       `json:"score_correctness"`
+	ScoreApproach         int32       `json:"score_approach"`
+	ScoreEdgeCases        int32       `json:"score_edge_cases"`
+	ScoreCommunication    int32       `json:"score_communication"`
+	FeedbackCorrectness   string      `json:"feedback_correctness"`
+	FeedbackApproach      string      `json:"feedback_approach"`
+	FeedbackEdgeCases     string      `json:"feedback_edge_cases"`
+	FeedbackCommunication string      `json:"feedback_communication"`
+	RawAiResponse         []byte      `json:"raw_ai_response"`
+}
+
+func (q *Queries) CreateEvaluation(ctx context.Context, arg CreateEvaluationParams) (Evaluation, error) {
+	row := q.db.QueryRow(ctx, createEvaluation,
+		arg.AttemptID,
+		arg.ScoreCorrectness,
+		arg.ScoreApproach,
+		arg.ScoreEdgeCases,
+		arg.ScoreCommunication,
+		arg.FeedbackCorrectness,
+		arg.FeedbackApproach,
+		arg.FeedbackEdgeCases,
+		arg.FeedbackCommunication,
+		arg.RawAiResponse,
+	)
+	var i Evaluation
+	err := row.Scan(
+		&i.ID,
+		&i.AttemptID,
+		&i.ScoreCorrectness,
+		&i.ScoreApproach,
+		&i.ScoreEdgeCases,
+		&i.ScoreCommunication,
+		&i.FeedbackCorrectness,
+		&i.FeedbackApproach,
+		&i.FeedbackEdgeCases,
+		&i.FeedbackCommunication,
+		&i.RawAiResponse,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createPlanTask = `-- name: CreatePlanTask :one
 INSERT INTO plan_tasks (plan_id, category, level, title, sequence_order)
 VALUES ($1, $2, $3, $4, $5)
@@ -220,6 +281,54 @@ func (q *Queries) GetBaselineDiagnosis(ctx context.Context, profileID pgtype.UUI
 		&i.ConceptualAnswer,
 		&i.BehavioralAnswer,
 		&i.DiagnosticReport,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEvaluationByAttemptID = `-- name: GetEvaluationByAttemptID :one
+SELECT id, attempt_id, score_correctness, score_approach, score_edge_cases, score_communication, feedback_correctness, feedback_approach, feedback_edge_cases, feedback_communication, raw_ai_response, created_at FROM evaluations WHERE attempt_id = $1
+`
+
+func (q *Queries) GetEvaluationByAttemptID(ctx context.Context, attemptID pgtype.UUID) (Evaluation, error) {
+	row := q.db.QueryRow(ctx, getEvaluationByAttemptID, attemptID)
+	var i Evaluation
+	err := row.Scan(
+		&i.ID,
+		&i.AttemptID,
+		&i.ScoreCorrectness,
+		&i.ScoreApproach,
+		&i.ScoreEdgeCases,
+		&i.ScoreCommunication,
+		&i.FeedbackCorrectness,
+		&i.FeedbackApproach,
+		&i.FeedbackEdgeCases,
+		&i.FeedbackCommunication,
+		&i.RawAiResponse,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEvaluationByID = `-- name: GetEvaluationByID :one
+SELECT id, attempt_id, score_correctness, score_approach, score_edge_cases, score_communication, feedback_correctness, feedback_approach, feedback_edge_cases, feedback_communication, raw_ai_response, created_at FROM evaluations WHERE id = $1
+`
+
+func (q *Queries) GetEvaluationByID(ctx context.Context, id pgtype.UUID) (Evaluation, error) {
+	row := q.db.QueryRow(ctx, getEvaluationByID, id)
+	var i Evaluation
+	err := row.Scan(
+		&i.ID,
+		&i.AttemptID,
+		&i.ScoreCorrectness,
+		&i.ScoreApproach,
+		&i.ScoreEdgeCases,
+		&i.ScoreCommunication,
+		&i.FeedbackCorrectness,
+		&i.FeedbackApproach,
+		&i.FeedbackEdgeCases,
+		&i.FeedbackCommunication,
+		&i.RawAiResponse,
 		&i.CreatedAt,
 	)
 	return i, err

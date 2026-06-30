@@ -63,6 +63,11 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 	attemptSvc := service.NewAttemptService(profileRepo, questionRepo, attemptRepo)
 	attemptHandler := handler.NewAttemptHandler(attemptSvc)
 
+	// Wire up Evaluations module
+	evaluationRepo := repository.NewEvaluationRepository(queries)
+	evaluationSvc := service.NewEvaluationService(profileRepo, attemptRepo, questionRepo, evaluationRepo)
+	evaluationHandler := handler.NewEvaluationHandler(evaluationSvc)
+
 	// Health Route
 	r.Get("/health", healthHandler.Check)
 
@@ -84,6 +89,8 @@ func NewRouter(dbPool *pgxpool.Pool) *chi.Mux {
 
 		r.Post("/attempts", attemptHandler.Submit)
 		r.Get("/attempts", attemptHandler.List)
+		r.Post("/attempts/{id}/evaluate", evaluationHandler.Evaluate)
+		r.Get("/attempts/{id}/evaluation", evaluationHandler.GetByAttempt)
 		r.Get("/attempts/{id}", attemptHandler.Get)
 	})
 

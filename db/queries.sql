@@ -102,3 +102,25 @@ FROM attempts
 WHERE profile_id = $1
   AND (sqlc.narg('filter_question_id')::uuid IS NULL OR question_id = sqlc.narg('filter_question_id'))
 ORDER BY created_at DESC;
+
+-- name: CreateEvaluation :one
+INSERT INTO evaluations (
+    attempt_id,
+    score_correctness,
+    score_approach,
+    score_edge_cases,
+    score_communication,
+    feedback_correctness,
+    feedback_approach,
+    feedback_edge_cases,
+    feedback_communication,
+    raw_ai_response
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING *;
+
+-- name: GetEvaluationByAttemptID :one
+SELECT * FROM evaluations WHERE attempt_id = $1;
+
+-- name: GetEvaluationByID :one
+SELECT * FROM evaluations WHERE id = $1;
