@@ -149,12 +149,12 @@ func happyPathServices(t *testing.T) testServices {
 			},
 		},
 		progress: &testutil.MockProgressService{
-			CreateSnapshotFn: func(_ context.Context) (service.ProgressSnapshotResponse, error) {
+			CreateSnapshotFn: func(_ context.Context) (service.ProgressSnapshotResponse, bool, error) {
 				return service.ProgressSnapshotResponse{
 					ID:        profileID,
 					ProfileID: profileID,
 					Stats:     service.SnapshotStats{Status: "complete", ReadinessIndex: 55},
-				}, nil
+				}, true, nil
 			},
 			GetLatestFn: func(_ context.Context) (service.ProgressSnapshotResponse, error) {
 				return service.ProgressSnapshotResponse{
@@ -298,14 +298,14 @@ func TestEndpointErrorResponses(t *testing.T) {
 	t.Run("POST /progress/snapshot refresh existing 200", func(t *testing.T) {
 		svc := base
 		svc.progress = &testutil.MockProgressService{
-			CreateSnapshotFn: func(_ context.Context) (service.ProgressSnapshotResponse, error) {
+			CreateSnapshotFn: func(_ context.Context) (service.ProgressSnapshotResponse, bool, error) {
 				return service.ProgressSnapshotResponse{
 					Stats: service.SnapshotStats{AttemptsCount: 3, Status: "complete"},
-				}, nil
+				}, false, nil
 			},
 		}
 		rec := testutil.DoRequest(t, newTestRouter(svc), testutil.JSONRequest(http.MethodPost, "/api/v1/progress/snapshot", nil))
-		testutil.AssertStatus(t, rec, http.StatusCreated)
+		testutil.AssertStatus(t, rec, http.StatusOK)
 	})
 
 	t.Run("GET /progress/latest not found 404", func(t *testing.T) {

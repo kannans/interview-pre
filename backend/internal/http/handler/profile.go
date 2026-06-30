@@ -26,7 +26,8 @@ func (h *ProfileHandler) Upsert(w http.ResponseWriter, r *http.Request) {
 	var input service.ProfileInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		slog.Error("Failed to decode profile request body", "error", err)
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
 		return
 	}
 

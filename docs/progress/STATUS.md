@@ -5,7 +5,9 @@
 
 ## Summary
 
-Planning, database schema, Go backend (Phases 5–7), and **Phase 8 Next.js frontend foundation** are complete. The frontend includes all seven app pages, API client layer, React Query hooks, shared UI components, and AI error handling. End-to-end workflow integration, comprehensive testing, and deployment are not started.
+Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (Phase 9), and structured loop review (Phase 10) are complete in code. The dashboard drives users through the full recovery loop with recommended practice, auto task completion, progress snapshot refresh, and workflow routing when plans are exhausted.
+
+**Manual QA and deployment are the remaining work.** See [REVIEW.md](./REVIEW.md) for issues fixed, test checklist, and gaps.
 
 ## Phase checklist
 
@@ -19,8 +21,8 @@ Planning, database schema, Go backend (Phases 5–7), and **Phase 8 Next.js fron
 | 6 | Backend product modules | Done (7/7) |
 | 7 | AI prompt layer + OpenAI | Done |
 | 8 | Next.js frontend | Done |
-| 9 | End-to-end recovery loop | Not started |
-| 10 | Testing & review | Not started |
+| 9 | End-to-end recovery loop | Done |
+| 10 | Testing & review | Done (automated); manual QA pending |
 | 11 | EC2 / Docker deployment | Not started |
 | 12 | 30-day personal validation plan | Not started |
 
@@ -35,9 +37,11 @@ Planning, database schema, Go backend (Phases 5–7), and **Phase 8 Next.js fron
 - [x] Practice questions API: `GET` `/api/v1/questions`, `GET` `/api/v1/questions/{id}` (15 seeded questions)
 - [x] Practice attempts API: `POST` / `GET` `/api/v1/attempts`, `GET` `/api/v1/attempts/{id}`
 - [x] Evaluations API: `POST` `/api/v1/attempts/{id}/evaluate`, `GET` `/api/v1/attempts/{id}/evaluation` (**OpenAI scoring by question type**)
-- [x] Progress snapshots API: `POST` `/api/v1/progress/snapshot`, `GET` `/api/v1/progress/latest`, `GET` `/api/v1/progress/snapshots` (**AI weekly summary**; `status: complete` or `degraded_ai_summary`)
+- [x] Progress snapshots API: `POST` `/api/v1/progress/snapshot`, `GET` `/api/v1/progress/latest`, `GET` `/api/v1/progress/snapshots` (**upsert same-day snapshot** — 201 create / 200 refresh; degraded AI fallback)
 - [x] AI layer: `backend/internal/ai/` — Responses API client, 8 versioned prompts, strict JSON validation, logging
-- [x] Next.js frontend: onboarding, diagnosis, plan, practice, mock interview (UI shell), progress, settings; API client + React Query; app shell layout
+- [x] Next.js frontend: all app pages, API client + React Query, shared UI, AI error handling
+- [x] End-to-end workflow: diagnosis → plan generation, recommended practice deep-links, post-evaluate snapshot + task completion, workflow stage routing (practice / progress / adjust)
+- [x] Loop review fixes: status codes, cache invalidation, workflow stage precedence, error handling (see [REVIEW.md](./REVIEW.md))
 
 ## Backend modules
 
@@ -48,21 +52,21 @@ Planning, database schema, Go backend (Phases 5–7), and **Phase 8 Next.js fron
 | Recovery plan | Done | AI-generated 5–10 tasks; replaces active plan on regenerate |
 | Practice questions | Done | List/get with filters |
 | Practice attempts | Done | Submit/list/get; profile-scoped |
-| Evaluations | Done | AI scores/feedback; one per attempt |
-| Progress snapshots | Done | Daily snapshot + AI summary; 409 if already exists for today |
+| Evaluations | Done | AI scores/feedback; one per attempt; 409 on duplicate |
+| Progress snapshots | Done | Daily upsert + AI summary; `status: complete` or `degraded_ai_summary` |
 | AI service | Done | Mock interview prompts stubbed; API returns `ErrNotImplemented` |
 
 ## Frontend pages
 
 | Page | Route | Status |
 |------|-------|--------|
-| Dashboard | `/` | Shell + workflow stage cards |
+| Dashboard | `/` | Workflow stage cards + today's task + recommended practice |
 | Onboarding / profile | `/onboarding` | Form wired to profile API |
-| Baseline diagnosis | `/diagnosis` | Submit + view diagnosis |
+| Baseline diagnosis | `/diagnosis` | Submit + plan generation; redirect to dashboard |
 | Recovery plan | `/plan` | Today's tasks + generate plan |
-| Daily practice | `/practice`, `/practice/[id]` | Question list + attempt submit |
+| Daily practice | `/practice`, `/practice/[id]` | Recommended question + attempt/evaluate + auto task complete |
 | Mock interview | `/mock-interview` | UI shell (backend stubs) |
-| Progress | `/progress` | Snapshot + latest stats |
+| Progress | `/progress` | Snapshot + history + adjustment recommendation |
 | Settings | `/settings` | API base URL config |
 
 ## API surface today
@@ -76,8 +80,8 @@ Planning, database schema, Go backend (Phases 5–7), and **Phase 8 Next.js fron
 | GET | `/api/v1/diagnosis` | Working |
 | POST | `/api/v1/plan` | Working (OpenAI) |
 | GET | `/api/v1/plan` | Working |
-| GET | `/api/v1/plan/today` | Working |
-| PATCH | `/api/v1/plan/tasks/{id}/complete` | Working |
+| GET | `/api/v1/plan/today` | Working (404 when exhausted) |
+| PATCH | `/api/v1/plan/tasks/{id}/complete` | Working (409 if already done) |
 | GET | `/api/v1/questions` | Working |
 | GET | `/api/v1/questions/{id}` | Working |
 | POST | `/api/v1/attempts` | Working |
@@ -85,13 +89,13 @@ Planning, database schema, Go backend (Phases 5–7), and **Phase 8 Next.js fron
 | GET | `/api/v1/attempts/{id}` | Working |
 | POST | `/api/v1/attempts/{id}/evaluate` | Working (OpenAI) |
 | GET | `/api/v1/attempts/{id}/evaluation` | Working |
-| POST | `/api/v1/progress/snapshot` | Working (OpenAI summary) |
+| POST | `/api/v1/progress/snapshot` | Working (201 create / 200 refresh) |
 | GET | `/api/v1/progress/latest` | Working |
 | GET | `/api/v1/progress/snapshots` | Working |
 
 ## Not started
 
-- [ ] End-to-end workflow integration (verify full loop in UI)
+- [ ] Manual end-to-end QA (checklist in [REVIEW.md](./REVIEW.md))
 - [ ] Mock interview backend endpoints (prompts exist; service stubs only)
 - [ ] Integration tests against real PostgreSQL (optional CI job)
 - [ ] Deployment (Dockerfiles, docker-compose, EC2)
@@ -112,7 +116,8 @@ cd frontend && npm run build
 
 ## Blockers
 
-- **End-to-end loop not verified** — pages exist but full profile → progress flow needs integration QA
+- **Manual QA not run** — automated tests pass; live walkthrough still needed ([REVIEW.md](./REVIEW.md) checklist)
+- **No deployment artifacts** — Phase 11 not started
 
 ## Repo layout notes
 
@@ -120,8 +125,8 @@ cd frontend && npm run build
 - `backend/internal/db/` — generated sqlc code + pgx connection pool
 - `backend/internal/ai/prompts/` — versioned prompt JSON documents
 - `frontend/src/` — Next.js app, API client, hooks, UI components
-- `docs/progress/` — build status and next-step prompts
+- `docs/progress/` — build status, review notes, and next-step prompts
 
 ## Recommended next step
 
-Wire the **end-to-end recovery workflow** (Phase 9). See [NEXT.md](./NEXT.md) for the copy-paste prompt.
+Run manual QA, then proceed to **Phase 11 — deployment**. See [NEXT.md](./NEXT.md) for the copy-paste prompt.

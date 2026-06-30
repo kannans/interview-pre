@@ -100,6 +100,12 @@ func (s *evaluationService) Evaluate(ctx context.Context, attemptID pgtype.UUID)
 		evalInput.SolutionHint = question.SolutionHint.String
 	}
 
+	switch question.Type {
+	case "programming_basics", "dsa", "concept":
+	default:
+		return db.Evaluation{}, fmt.Errorf("validation error: unsupported question type %q", question.Type)
+	}
+
 	result, err := s.aiService.EvaluateAttempt(ctx, question.Type, evalInput)
 	if err != nil {
 		return db.Evaluation{}, fmt.Errorf("%w: %v", ErrAIFailed, err)
@@ -136,6 +142,9 @@ func (s *evaluationService) Evaluate(ctx context.Context, attemptID pgtype.UUID)
 
 	evaluation, err := s.evaluationRepo.Create(ctx, params)
 	if err != nil {
+		if isUniqueViolation(err) {
+			return db.Evaluation{}, ErrEvaluationAlreadyExists
+		}
 		return db.Evaluation{}, fmt.Errorf("failed to create evaluation: %w", err)
 	}
 

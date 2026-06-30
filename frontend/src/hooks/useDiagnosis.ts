@@ -31,8 +31,18 @@ export function useSubmitDiagnosisAndPlan() {
   return useMutation({
     mutationFn: async (input: DiagnosisInput) => {
       const diagnosis = await diagnosisApi.submit(input);
-      const plan = await planApi.generate();
-      return { diagnosis, plan };
+      try {
+        const plan = await planApi.generate();
+        return { diagnosis, plan };
+      } catch (planErr) {
+        queryClient.setQueryData(queryKeys.diagnosis, diagnosis);
+        if (isApiError(planErr)) {
+          throw new Error(
+            `Diagnosis saved, but plan generation failed: ${planErr.message}`,
+          );
+        }
+        throw planErr;
+      }
     },
     onSuccess: ({ diagnosis, plan }) => {
       queryClient.setQueryData(queryKeys.diagnosis, diagnosis);

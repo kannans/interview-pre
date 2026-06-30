@@ -1,47 +1,45 @@
 # Next Implementation Step
 
-**Current focus:** Phase 10 — Testing and review  
-**Prerequisite:** Phase 9 end-to-end recovery loop wired; backend tests pass (`cd backend && go test ./...`); frontend builds (`cd frontend && npm run build`).
+**Current focus:** Phase 11 — EC2 / Docker deployment  
+**Prerequisite:** Phase 10 review complete; `go test ./...` and `npm run build` pass; manual QA checklist in [REVIEW.md](./REVIEW.md) run (or acknowledged).
 
-Use the prompt below in a new agent session. Review and test the output before moving to Phase 11 (deployment).
+Use the prompt below in a new agent session after committing any pending review fixes.
 
 ---
 
-## Copy-paste prompt: Testing and review
+## Copy-paste prompt: Deployment
 
 ```text
-Review the end-to-end recovery loop for correctness, gaps, and error handling.
+Add Docker and deployment artifacts for the interview prep coach MVP.
 
-The loop is:
-profile -> diagnosis -> plan -> practice -> evaluate -> progress -> adjust
+Deliver:
+1. Dockerfile for Go API (backend/cmd/api)
+2. Dockerfile for Next.js frontend (production build)
+3. docker-compose.yml — Postgres + API + frontend
+4. Environment variable documentation (.env.example files)
+5. Update README with deploy and smoke-test steps
 
-Verify and fix as needed:
-1. backend API correctness (status codes, validation, edge cases)
-2. AI response parsing and degraded-mode fallbacks
-3. frontend integration (hooks, cache invalidation, workflow stage)
-4. progress snapshot refresh after evaluation
-5. workflow transitions when today's task is complete or plan is exhausted
+Constraints:
+- Single-user MVP; no auth layer
+- Postgres migrations run on API startup or via documented init step
+- Frontend talks to API via configurable base URL
+- Do not add new product features
 
 Return:
-1. issues found and fixes applied
-2. manual test checklist with pass/fail notes
-3. remaining gaps before deployment
-4. recommended follow-ups
-
-Rules:
-- Do not add new feature scope.
-- Focus on reliability, error handling, and test coverage for the core loop.
+1. files added/changed
+2. how to run locally with docker compose
+3. smoke-test checklist for deployed stack
 ```
 
 ---
 
-## After testing and review
+## After deployment
 
-Phase 10 validates the full loop. Proceed to **Phase 11 — EC2 / Docker deployment** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
+Phase 11 ships the stack. Proceed to **Phase 12 — 30-day personal validation plan** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
 
-1. Add Dockerfiles and docker-compose for API + Postgres
-2. Document environment variables and deployment steps
-3. Smoke-test the deployed stack
+1. Use the app daily for real interview prep
+2. Log friction, AI quality issues, and missing features
+3. Decide what to cut or improve post-MVP
 
 ## Local dev (frontend + backend)
 
@@ -57,3 +55,11 @@ cd frontend && npm run dev
 Frontend: http://localhost:3000 — API: http://localhost:8080/api/v1
 
 See README for database setup and manual AI curl examples (`backend/internal/ai/README.md`).
+
+## Progress docs
+
+| File | Purpose |
+|------|---------|
+| [STATUS.md](./STATUS.md) | Phase checklist and module status |
+| [REVIEW.md](./REVIEW.md) | Phase 10 loop review, fixes, manual QA checklist |
+| [NEXT.md](./NEXT.md) | Current implementation prompt |

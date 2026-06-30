@@ -21,7 +21,7 @@ func NewProgressHandler(progressService service.ProgressService) *ProgressHandle
 func (h *ProgressHandler) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	snapshot, err := h.progressService.CreateSnapshot(r.Context())
+	snapshot, created, err := h.progressService.CreateSnapshot(r.Context())
 	if err != nil {
 		if writeProgressError(w, err) {
 			return
@@ -32,7 +32,11 @@ func (h *ProgressHandler) CreateSnapshot(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	if created {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 	if err := json.NewEncoder(w).Encode(snapshot); err != nil {
 		slog.Error("Failed to encode progress snapshot response", "error", err)
 	}
@@ -94,13 +98,8 @@ func writeProgressError(w http.ResponseWriter, err error) bool {
 		w.WriteHeader(http.StatusPreconditionFailed)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return true
-	case errors.Is(err, service.ErrProgressSnapshotNotFound),
-		errors.Is(err, service.ErrProgressSnapshotNotOwned):
+	case errors.Is(err, service.ErrProgressSnapshotNotFound):
 		w.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		return true
-	case errors.Is(err, service.ErrProgressSnapshotAlreadyExists):
-		w.WriteHeader(http.StatusConflict)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return true
 	default:

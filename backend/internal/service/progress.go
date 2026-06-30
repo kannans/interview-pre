@@ -12,17 +12,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/repository"
 )
 
-var (
-	ErrProgressSnapshotNotFound      = errors.New("no progress snapshot found")
-	ErrProgressSnapshotAlreadyExists = errors.New("progress snapshot already exists for today")
-	ErrProgressSnapshotNotOwned      = errors.New("progress snapshot does not belong to your profile")
-)
+var ErrProgressSnapshotNotFound = errors.New("no progress snapshot found")
 
 // SnapshotAverageScores holds mean evaluation dimension scores (0–10 scale).
 type SnapshotAverageScores struct {
@@ -66,7 +63,7 @@ type ListProgressSnapshotsResponse struct {
 
 // ProgressService orchestrates progress snapshot computation and retrieval.
 type ProgressService interface {
-	CreateSnapshot(ctx context.Context) (ProgressSnapshotResponse, error)
+	CreateSnapshot(ctx context.Context) (ProgressSnapshotResponse, bool, error)
 	GetLatest(ctx context.Context) (ProgressSnapshotResponse, error)
 	ListSnapshots(ctx context.Context, limitStr, startDateStr, endDateStr string) (ListProgressSnapshotsResponse, error)
 }
@@ -92,45 +89,52 @@ func NewProgressService(
 	}
 }
 
-func (s *progressService) CreateSnapshot(ctx context.Context) (ProgressSnapshotResponse, error) {
+func (s *progressService) CreateSnapshot(ctx context.Context) (ProgressSnapshotResponse, bool, error) {
 	profile, err := s.profileRepo.Get(ctx)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ProgressSnapshotResponse{}, ErrProfileMissing
+			return ProgressSnapshotResponse{}, false, ErrProfileMissing
 		}
-		return ProgressSnapshotResponse{}, fmt.Errorf("failed to get profile: %w", err)
+		return ProgressSnapshotResponse{}, false, fmt.Errorf("failed to get profile: %w", err)
 	}
 
 	snapshotDate := todayDate()
 
 	stats, err := s.computeStats(ctx, profile)
 	if err != nil {
-		return ProgressSnapshotResponse{}, err
+		return ProgressSnapshotResponse{}, false, err
 	}
 
 	statsJSON, err := json.Marshal(stats)
 	if err != nil {
-		return ProgressSnapshotResponse{}, fmt.Errorf("failed to marshal snapshot stats: %w", err)
+		return ProgressSnapshotResponse{}, false, fmt.Errorf("failed to marshal snapshot stats: %w", err)
 	}
 
 	_, err = s.progressRepo.GetByProfileAndDate(ctx, profile.ID, snapshotDate)
 	if err == nil {
 		snapshot, err := s.progressRepo.Update(ctx, profile.ID, snapshotDate, statsJSON)
 		if err != nil {
-			return ProgressSnapshotResponse{}, fmt.Errorf("failed to refresh progress snapshot: %w", err)
+			return ProgressSnapshotResponse{}, false, fmt.Errorf("failed to refresh progress snapshot: %w", err)
 		}
-		return toProgressSnapshotResponse(snapshot, stats), nil
+		return toProgressSnapshotResponse(snapshot, stats), false, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return ProgressSnapshotResponse{}, fmt.Errorf("failed to check existing snapshot: %w", err)
+		return ProgressSnapshotResponse{}, false, fmt.Errorf("failed to check existing snapshot: %w", err)
 	}
 
 	snapshot, err := s.progressRepo.Create(ctx, profile.ID, snapshotDate, statsJSON)
 	if err != nil {
-		return ProgressSnapshotResponse{}, fmt.Errorf("failed to create progress snapshot: %w", err)
+		if isUniqueViolation(err) {
+			snapshot, updateErr := s.progressRepo.Update(ctx, profile.ID, snapshotDate, statsJSON)
+			if updateErr != nil {
+				return ProgressSnapshotResponse{}, false, fmt.Errorf("failed to refresh progress snapshot after race: %w", updateErr)
+			}
+			return toProgressSnapshotResponse(snapshot, stats), false, nil
+		}
+		return ProgressSnapshotResponse{}, false, fmt.Errorf("failed to create progress snapshot: %w", err)
 	}
 
-	return toProgressSnapshotResponse(snapshot, stats), nil
+	return toProgressSnapshotResponse(snapshot, stats), true, nil
 }
 
 func (s *progressService) GetLatest(ctx context.Context) (ProgressSnapshotResponse, error) {
@@ -321,11 +325,13 @@ func (s *progressService) planTaskCounts(ctx context.Context, profileID pgtype.U
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, 0
 		}
+		slog.Warn("failed to load active plan for snapshot stats", "error", err, "profile_id", uuidString(profileID))
 		return 0, 0
 	}
 
 	tasks, err := s.planRepo.ListTasks(ctx, plan.ID)
 	if err != nil {
+		slog.Warn("failed to list plan tasks for snapshot stats", "error", err, "plan_id", uuidString(plan.ID))
 		return 0, 0
 	}
 
@@ -431,4 +437,9 @@ func toProgressSnapshotResponse(snapshot db.ProgressSnapshot, stats SnapshotStat
 		Stats:        stats,
 		CreatedAt:    snapshot.CreatedAt,
 	}
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }

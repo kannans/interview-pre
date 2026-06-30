@@ -26,7 +26,7 @@ export function useCreateSnapshot() {
     mutationFn: () => progressApi.createSnapshot(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.progressLatest });
-      queryClient.invalidateQueries({ queryKey: queryKeys.progressSnapshots({}) });
+      queryClient.invalidateQueries({ queryKey: ["progress", "snapshots"] });
     },
   });
 }

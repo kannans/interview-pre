@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/kannans/interview-prep/backend/internal/ai"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/repository"
@@ -89,7 +90,10 @@ func (s *diagnosisService) Submit(ctx context.Context, input DiagnosisInput) (db
 func (s *diagnosisService) Get(ctx context.Context) (db.BaselineDiagnosis, error) {
 	profile, err := s.profileRepo.Get(ctx)
 	if err != nil {
-		return db.BaselineDiagnosis{}, fmt.Errorf("profile not found: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return db.BaselineDiagnosis{}, ErrProfileMissing
+		}
+		return db.BaselineDiagnosis{}, fmt.Errorf("failed to get profile: %w", err)
 	}
 
 	return s.diagnosisRepo.Get(ctx, profile.ID)

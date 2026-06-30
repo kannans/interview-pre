@@ -28,6 +28,7 @@ export function useGeneratePlan() {
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.plan, data);
       queryClient.invalidateQueries({ queryKey: queryKeys.todayTask });
+      queryClient.invalidateQueries({ queryKey: queryKeys.progressLatest });
     },
   });
 }
@@ -40,6 +41,12 @@ export function useCompleteTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.plan });
       queryClient.invalidateQueries({ queryKey: queryKeys.todayTask });
+    },
+    onError: (error) => {
+      if (isApiError(error) && error.isConflict) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.plan });
+        queryClient.invalidateQueries({ queryKey: queryKeys.todayTask });
+      }
     },
   });
 }

@@ -58,9 +58,12 @@ func TestProgressCreateSnapshotSuccess(t *testing.T) {
 		},
 	}
 
-	resp, err := service.NewProgressService(profileRepo, planRepo, progressRepo, aiSvc).CreateSnapshot(ctx)
+	resp, created, err := service.NewProgressService(profileRepo, planRepo, progressRepo, aiSvc).CreateSnapshot(ctx)
 	if err != nil {
 		t.Fatalf("create snapshot: %v", err)
+	}
+	if !created {
+		t.Fatal("expected new snapshot, got refresh")
 	}
 	if resp.Stats.Status != "complete" {
 		t.Fatalf("status = %q", resp.Stats.Status)
@@ -101,7 +104,7 @@ func TestProgressCreateSnapshotDegradedOnAIFailure(t *testing.T) {
 		},
 	}
 
-	resp, err := service.NewProgressService(profileRepo, planRepo, progressRepo, aiSvc).CreateSnapshot(context.Background())
+	resp, _, err := service.NewProgressService(profileRepo, planRepo, progressRepo, aiSvc).CreateSnapshot(context.Background())
 	if err != nil {
 		t.Fatalf("expected degraded save without error, got %v", err)
 	}
@@ -138,9 +141,12 @@ func TestProgressCreateSnapshotRefreshesExisting(t *testing.T) {
 		},
 	}
 
-	resp, err := service.NewProgressService(profileRepo, planRepo, progressRepo, aiSvc).CreateSnapshot(context.Background())
+	resp, created, err := service.NewProgressService(profileRepo, planRepo, progressRepo, aiSvc).CreateSnapshot(context.Background())
 	if err != nil {
 		t.Fatalf("expected refresh without error, got %v", err)
+	}
+	if created {
+		t.Fatal("expected refresh, got create")
 	}
 	if resp.Stats.AttemptsCount != 2 {
 		t.Fatalf("attempts_count = %d", resp.Stats.AttemptsCount)

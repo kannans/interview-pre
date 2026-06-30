@@ -107,12 +107,12 @@ func (m *MockEvaluationService) GetByAttemptID(ctx context.Context, attemptID pg
 }
 
 type MockProgressService struct {
-	CreateSnapshotFn func(ctx context.Context) (service.ProgressSnapshotResponse, error)
+	CreateSnapshotFn func(ctx context.Context) (service.ProgressSnapshotResponse, bool, error)
 	GetLatestFn      func(ctx context.Context) (service.ProgressSnapshotResponse, error)
 	ListSnapshotsFn  func(ctx context.Context, limitStr, startDateStr, endDateStr string) (service.ListProgressSnapshotsResponse, error)
 }
 
-func (m *MockProgressService) CreateSnapshot(ctx context.Context) (service.ProgressSnapshotResponse, error) {
+func (m *MockProgressService) CreateSnapshot(ctx context.Context) (service.ProgressSnapshotResponse, bool, error) {
 	return m.CreateSnapshotFn(ctx)
 }
 

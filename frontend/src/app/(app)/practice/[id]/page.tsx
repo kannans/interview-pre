@@ -19,6 +19,7 @@ import { useCompleteTask, useTodayTask } from "@/hooks/usePlan";
 import { useSettingsStore } from "@/lib/store/settings";
 import { formatCategory, formatLevel } from "@/lib/utils/format";
 import { isApiError } from "@/lib/api";
+import { attemptsApi } from "@/lib/api/attempts";
 
 export default function PracticeQuestionPage() {
   const params = useParams<{ id: string }>();
@@ -72,6 +73,16 @@ export default function PracticeQuestionPage() {
               const task = today.data?.task;
               if (task && !task.is_completed) {
                 completeTask.mutate(task.id);
+              }
+            },
+            onError: async (error) => {
+              if (isApiError(error) && error.isConflict) {
+                try {
+                  const ev = await attemptsApi.getEvaluation(attempt.id);
+                  setEvaluation(ev);
+                } catch {
+                  // keep existing error UI
+                }
               }
             },
           });

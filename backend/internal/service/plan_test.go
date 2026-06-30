@@ -92,3 +92,27 @@ func TestPlanGetNotFound(t *testing.T) {
 		t.Fatalf("expected ErrPlanNotFound, got %v", err)
 	}
 }
+
+func TestPlanGetTodayExhausted(t *testing.T) {
+	profileID := testutil.MustUUID(t, testutil.TestUUID)
+	planID := testutil.MustUUID(t, "d4000004-0000-4000-8000-000000000004")
+	profileRepo := &testutil.MockProfileRepository{
+		GetFn: func(context.Context) (db.Profile, error) { return testutil.SampleProfile(profileID), nil },
+	}
+	planRepo := &testutil.MockPlanRepository{
+		GetActiveFn: func(context.Context, pgtype.UUID) (db.RecoveryPlan, error) {
+			return db.RecoveryPlan{ID: planID}, nil
+		},
+		ListTasksFn: func(context.Context, pgtype.UUID) ([]db.PlanTask, error) {
+			return []db.PlanTask{{IsCompleted: true}}, nil
+		},
+		GetTodayTaskFn: func(context.Context, pgtype.UUID) (db.PlanTask, error) {
+			return db.PlanTask{}, pgx.ErrNoRows
+		},
+	}
+
+	_, err := service.NewPlanService(profileRepo, &testutil.MockDiagnosisRepository{}, planRepo, &testutil.MockAIService{}).GetToday(context.Background())
+	if !errors.Is(err, service.ErrNoTasksRemaining) {
+		t.Fatalf("expected ErrNoTasksRemaining, got %v", err)
+	}
+}

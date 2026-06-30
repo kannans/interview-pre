@@ -65,6 +65,11 @@ func (h *DiagnosisHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	diagnosis, err := h.diagnosisService.Get(r.Context())
 	if err != nil {
+		if errors.Is(err, service.ErrProfileMissing) {
+			w.WriteHeader(http.StatusPreconditionFailed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			w.WriteHeader(http.StatusNotFound)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "no diagnosis found"})

@@ -55,6 +55,16 @@ export default function ProgressPage() {
         />
       )}
 
+      {latest.isError &&
+        isApiError(latest.error) &&
+        !latest.error.isNotFound && (
+          <ErrorAlert
+            className="mb-4"
+            message={latest.error.message}
+            onRetry={() => latest.refetch()}
+          />
+        )}
+
       {latest.isError && isApiError(latest.error) && latest.error.isNotFound && (
         <EmptyState
           title="No progress data yet"

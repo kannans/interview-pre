@@ -46,9 +46,6 @@ export function useWorkflowStage() {
       }
       return "progress";
     }
-    if (progress.data?.stats.adjustment_recommendation) {
-      return "adjust";
-    }
     return "practice";
   }, [
     profile.isError,
@@ -113,6 +110,7 @@ export function useWorkflowStage() {
       profile.isLoading ||
       diagnosis.isLoading ||
       plan.isLoading ||
-      today.isLoading,
+      today.isLoading ||
+      progress.isLoading,
   };
 }

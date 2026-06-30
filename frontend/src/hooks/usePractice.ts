@@ -34,7 +34,7 @@ export function useSubmitAttempt() {
   return useMutation({
     mutationFn: (input: AttemptInput) => attemptsApi.submit(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.attempts() });
+      queryClient.invalidateQueries({ queryKey: ["attempts"] });
     },
   });
 }
@@ -58,9 +58,7 @@ export function useEvaluateAttempt() {
       }
 
       queryClient.invalidateQueries({ queryKey: queryKeys.progressLatest });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.progressSnapshots({}),
-      });
+      queryClient.invalidateQueries({ queryKey: ["progress", "snapshots"] });
     },
   });
 }
