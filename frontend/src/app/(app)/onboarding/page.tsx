@@ -116,16 +116,6 @@ export default function OnboardingPage() {
             required
           />
 
-          {upsert.isError && (
-            <ErrorAlert
-              message={
-                isApiError(upsert.error)
-                  ? upsert.error.message
-                  : "Failed to save profile"
-              }
-            />
-          )}
-
           <div className="flex gap-2 pt-2">
             <Button type="submit" loading={upsert.isPending}>
               {profile.data ? "Update profile" : "Save & continue"}

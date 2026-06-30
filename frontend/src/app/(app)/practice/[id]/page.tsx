@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { AIErrorAlert, isAIError } from "@/components/ui/AIErrorAlert";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import {
@@ -146,35 +145,6 @@ export default function PracticeQuestionPage() {
               className="min-h-48 font-mono text-xs"
               required
             />
-
-            {submitAttempt.isError && (
-              <ErrorAlert
-                message={
-                  isApiError(submitAttempt.error)
-                    ? submitAttempt.error.message
-                    : "Failed to submit attempt"
-                }
-              />
-            )}
-            {evaluateAttempt.isError && isAIError(evaluateAttempt.error) && (
-              <AIErrorAlert
-                message="Evaluation AI is unavailable. Your attempt was saved — retry evaluation when the service recovers."
-                onRetry={() =>
-                  attemptId && evaluateAttempt.mutate(attemptId, {
-                    onSuccess: (ev) => setEvaluation(ev),
-                  })
-                }
-              />
-            )}
-            {evaluateAttempt.isError && !isAIError(evaluateAttempt.error) && (
-              <ErrorAlert
-                message={
-                  isApiError(evaluateAttempt.error)
-                    ? evaluateAttempt.error.message
-                    : "Evaluation failed"
-                }
-              />
-            )}
 
             <Button
               type="submit"

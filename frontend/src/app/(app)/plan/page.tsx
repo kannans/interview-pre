@@ -4,7 +4,6 @@ import { TopBar } from "@/components/layout/TopBar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { AIErrorAlert, isAIError } from "@/components/ui/AIErrorAlert";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -45,24 +44,6 @@ export default function PlanPage() {
           </Button>
         }
       />
-
-      {generate.isError && isAIError(generate.error) && (
-        <AIErrorAlert
-          className="mb-4"
-          onRetry={() => generate.mutate()}
-        />
-      )}
-      {generate.isError && !isAIError(generate.error) && (
-        <ErrorAlert
-          className="mb-4"
-          message={
-            isApiError(generate.error)
-              ? generate.error.message
-              : "Plan generation failed"
-          }
-          onRetry={() => generate.mutate()}
-        />
-      )}
 
       {plan.isError && isApiError(plan.error) && plan.error.isNotFound && (
         <EmptyState

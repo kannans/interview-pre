@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { diagnosisApi, planApi, isApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query/keys";
+import { toastError, toastSuccess } from "@/lib/toast";
 import type { DiagnosisInput } from "@/lib/types/api";
 
 export function useDiagnosis() {
@@ -20,7 +21,9 @@ export function useSubmitDiagnosis() {
     mutationFn: (input: DiagnosisInput) => diagnosisApi.submit(input),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.diagnosis, data);
+      toastSuccess("Diagnosis saved");
     },
+    onError: (error) => toastError(error, "Diagnosis failed"),
   });
 }
 
@@ -48,6 +51,8 @@ export function useSubmitDiagnosisAndPlan() {
       queryClient.setQueryData(queryKeys.diagnosis, diagnosis);
       queryClient.setQueryData(queryKeys.plan, plan);
       queryClient.invalidateQueries({ queryKey: queryKeys.todayTask });
+      toastSuccess("Diagnosis complete — recovery plan generated");
     },
+    onError: (error) => toastError(error, "Diagnosis failed"),
   });
 }

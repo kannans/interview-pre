@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { questionsApi, attemptsApi, progressApi, isApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query/keys";
+import { toastError, toastSuccess } from "@/lib/toast";
 import type { AttemptInput, QuestionListFilter } from "@/lib/types/api";
 
 export function useQuestions(filter?: QuestionListFilter) {
@@ -36,6 +37,7 @@ export function useSubmitAttempt() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attempts"] });
     },
+    onError: (error) => toastError(error, "Failed to submit attempt"),
   });
 }
 
@@ -59,6 +61,13 @@ export function useEvaluateAttempt() {
 
       queryClient.invalidateQueries({ queryKey: queryKeys.progressLatest });
       queryClient.invalidateQueries({ queryKey: ["progress", "snapshots"] });
+      toastSuccess("Evaluation complete");
+    },
+    onError: (error) => {
+      if (isApiError(error) && error.isConflict) {
+        return;
+      }
+      toastError(error, "Evaluation failed");
     },
   });
 }

@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { progressApi, isApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query/keys";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 export function useLatestProgress() {
   return useQuery({
@@ -27,6 +28,8 @@ export function useCreateSnapshot() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.progressLatest });
       queryClient.invalidateQueries({ queryKey: ["progress", "snapshots"] });
+      toastSuccess("Progress snapshot updated");
     },
+    onError: (error) => toastError(error, "Could not create snapshot"),
   });
 }

@@ -43,18 +43,6 @@ export default function ProgressPage() {
         }
       />
 
-      {createSnapshot.isError && (
-        <ErrorAlert
-          className="mb-4"
-          message={
-            isApiError(createSnapshot.error)
-              ? createSnapshot.error.message
-              : "Could not create snapshot"
-          }
-          onRetry={() => createSnapshot.mutate()}
-        />
-      )}
-
       {latest.isError &&
         isApiError(latest.error) &&
         !latest.error.isNotFound && (

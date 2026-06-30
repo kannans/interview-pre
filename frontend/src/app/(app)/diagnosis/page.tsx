@@ -7,13 +7,10 @@ import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { AIErrorAlert, isAIError } from "@/components/ui/AIErrorAlert";
-import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useDiagnosis, useSubmitDiagnosisAndPlan } from "@/hooks/useDiagnosis";
 import { parseDiagnosticReport } from "@/lib/utils/diagnostic-report";
 import { formatCategory, formatPercent } from "@/lib/utils/format";
-import { isApiError } from "@/lib/api";
 
 export default function DiagnosisPage() {
   const router = useRouter();
@@ -106,20 +103,6 @@ export default function DiagnosisPage() {
             onChange={(e) => setBehavioralAnswer(e.target.value)}
             required
           />
-
-          {submit.isError && isAIError(submit.error) && (
-            <AIErrorAlert onRetry={() => submit.reset()} />
-          )}
-          {submit.isError && !isAIError(submit.error) && (
-            <ErrorAlert
-              message={
-                isApiError(submit.error)
-                  ? submit.error.message
-                  : "Diagnosis failed"
-              }
-              onRetry={() => submit.reset()}
-            />
-          )}
 
           <Button type="submit" loading={submit.isPending}>
             {report ? "Update diagnosis" : "Run AI diagnosis"}
