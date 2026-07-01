@@ -24,7 +24,7 @@ Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (
 | 9 | End-to-end recovery loop | Done |
 | 10 | Testing & review | Done (automated); manual QA pending |
 | 11 | EC2 / Docker deployment | Done |
-| 12 | 30-day personal validation plan | Not started |
+| 12 | 30-day personal validation plan | Playbook ready — **execution** not started |
 | 13 | Measurable recovery (failure patterns + velocity) | Not started |
 | 14 | Pressure mode + proactive adjust + mock interview | Not started |
 | 15 | Briefing + debrief + micro-drills | Not started |
@@ -103,7 +103,8 @@ Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (
 - [ ] Manual end-to-end QA (checklist in [REVIEW.md](./REVIEW.md))
 - [ ] Mock interview backend endpoints (prompts exist; service stubs only)
 - [ ] Integration tests against real PostgreSQL (optional CI job)
-- [ ] Phase 12 — 30-day personal validation playbook
+- [x] Phase 12 — validation playbook ([VALIDATION.md](./VALIDATION.md) + `validation/` templates)
+- [ ] Phase 12 — 30-day validation **execution** (Day 0 QA → Day 30 gate)
 
 ## Testing
 
@@ -134,6 +135,6 @@ cd frontend && npm run build
 
 ## Recommended next step
 
-**Phase 12 — 30-day personal validation.** Copy-paste prompt in [NEXT.md](./NEXT.md).
+**Phase 12 — execute 30-day validation.** Playbook: [VALIDATION.md](./VALIDATION.md) · Next steps: [NEXT.md](./NEXT.md).
 
 Post-MVP direction: [Innovation Plan](../product/interview-preparation-app-innovation-plan.md) · All prompts: [Master Implementation Prompts](../prompts/interview-preparation-app-master-implementation-prompts.md).
