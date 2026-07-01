@@ -13,6 +13,7 @@ package http_test
 //	PATCH /api/v1/plan/tasks/{id}/complete
 //	GET  /api/v1/questions
 //	GET  /api/v1/questions/{id}
+//	POST /api/v1/run
 //	POST /api/v1/attempts
 //	GET  /api/v1/attempts
 //	GET  /api/v1/attempts/{id}

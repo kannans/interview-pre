@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { questionsApi, attemptsApi, progressApi, isApiError } from "@/lib/api";
+import { questionsApi, attemptsApi, progressApi, runApi, isApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query/keys";
 import { toastError, toastSuccess } from "@/lib/toast";
-import type { AttemptInput, QuestionListFilter } from "@/lib/types/api";
+import type { AttemptInput, QuestionListFilter, RunCodeInput } from "@/lib/types/api";
 
 export function useQuestions(filter?: QuestionListFilter) {
   return useQuery({
@@ -78,5 +78,12 @@ export function useEvaluation(attemptId: string | null) {
     queryFn: () => attemptsApi.getEvaluation(attemptId!),
     enabled: !!attemptId,
     retry: (_, error) => !isApiError(error) || !error.isNotFound,
+  });
+}
+
+export function useRunCode() {
+  return useMutation({
+    mutationFn: (input: RunCodeInput) => runApi.execute(input),
+    onError: (error) => toastError(error, "Failed to run code"),
   });
 }

@@ -125,6 +125,20 @@ export interface AttemptInput {
   language: string;
 }
 
+export interface RunCodeInput {
+  language: string;
+  code: string;
+  stdin?: string;
+}
+
+export interface RunCodeResult {
+  stdout: string;
+  stderr: string;
+  exit_code: number;
+  duration_ms: number;
+  timed_out: boolean;
+}
+
 export interface ListAttemptsResponse {
   attempts: Attempt[];
 }

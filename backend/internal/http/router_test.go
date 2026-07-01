@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/http/handler"
+	"github.com/kannans/interview-prep/backend/internal/runner"
 	"github.com/kannans/interview-prep/backend/internal/service"
 	"github.com/kannans/interview-prep/backend/internal/testutil"
 )
@@ -24,6 +25,7 @@ type testServices struct {
 	attempt    service.AttemptService
 	evaluation service.EvaluationService
 	progress   service.ProgressService
+	run        service.RunService
 }
 
 func newTestRouter(svc testServices) http.Handler {
@@ -45,6 +47,8 @@ func newTestRouter(svc testServices) http.Handler {
 
 		r.Get("/questions", handler.NewQuestionHandler(svc.question).List)
 		r.Get("/questions/{id}", handler.NewQuestionHandler(svc.question).Get)
+
+		r.Post("/run", handler.NewRunHandler(svc.run).Run)
 
 		r.Post("/attempts", handler.NewAttemptHandler(svc.attempt).Submit)
 		r.Get("/attempts", handler.NewAttemptHandler(svc.attempt).List)
@@ -167,7 +171,14 @@ func happyPathServices(t *testing.T) testServices {
 				}, nil
 			},
 		},
+		run: service.NewRunService(stubRunExecutor{}),
 	}
+}
+
+type stubRunExecutor struct{}
+
+func (stubRunExecutor) Run(_ context.Context, _ runner.RunInput) (runner.RunResult, error) {
+	return runner.RunResult{Stdout: "3\n", ExitCode: 0, DurationMs: 1}, nil
 }
 
 func TestAllEndpointsCoverage(t *testing.T) {
@@ -200,6 +211,9 @@ func TestAllEndpointsCoverage(t *testing.T) {
 		{"PATCH /api/v1/plan/tasks/complete", http.MethodPatch, "/api/v1/plan/tasks/" + taskID + "/complete", nil, http.StatusOK},
 		{"GET /api/v1/questions", http.MethodGet, "/api/v1/questions", nil, http.StatusOK},
 		{"GET /api/v1/questions/id", http.MethodGet, "/api/v1/questions/" + testutil.TestUUID, nil, http.StatusOK},
+		{"POST /api/v1/run", http.MethodPost, "/api/v1/run", map[string]string{
+			"language": "javascript", "code": "console.log(3);",
+		}, http.StatusOK},
 		{"POST /api/v1/attempts", http.MethodPost, "/api/v1/attempts", map[string]any{
 			"question_id": testutil.TestUUID, "submitted_content": "answer", "time_taken_seconds": 120,
 		}, http.StatusCreated},

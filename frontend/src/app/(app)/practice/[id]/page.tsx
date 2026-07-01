@@ -10,12 +10,16 @@ import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { CodeEditor } from "@/components/practice/CodeEditor";
 import { LanguageSelect } from "@/components/practice/LanguageSelect";
+import { RunOutput } from "@/components/practice/RunOutput";
 import {
   useEvaluateAttempt,
+  useAttempts,
   useQuestion,
+  useRunCode,
   useSubmitAttempt,
 } from "@/hooks/usePractice";
 import { useCompleteTask, useTodayTask } from "@/hooks/usePlan";
+import { usePracticeDraftsStore } from "@/lib/store/practice-drafts";
 import { useSettingsStore } from "@/lib/store/settings";
 import { formatCategory, formatLevel } from "@/lib/utils/format";
 import { isApiError } from "@/lib/api";
@@ -25,21 +29,43 @@ import {
   monacoLanguageId,
   type PracticeLanguage,
 } from "@/lib/practice/languages";
+import type { Attempt, RunCodeResult } from "@/lib/types/api";
+
+function latestAttemptForLanguage(
+  attempts: Attempt[] | undefined,
+  language: PracticeLanguage,
+): Attempt | undefined {
+  if (!attempts?.length) return undefined;
+  return attempts
+    .filter((a) => a.language === language)
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )[0];
+}
 
 export default function PracticeQuestionPage() {
   const params = useParams<{ id: string }>();
   const questionId = params.id;
 
   const question = useQuestion(questionId);
+  const attempts = useAttempts(questionId);
   const today = useTodayTask();
   const completeTask = useCompleteTask();
   const submitAttempt = useSubmitAttempt();
   const evaluateAttempt = useEvaluateAttempt();
+  const runCode = useRunCode();
   const defaultMinutes = useSettingsStore((s) => s.defaultPracticeMinutes);
   const defaultLanguage = useSettingsStore((s) => s.defaultPracticeLanguage);
+  const getDraft = usePracticeDraftsStore((s) => s.getDraft);
+  const setDraft = usePracticeDraftsStore((s) => s.setDraft);
+  const clearDraft = usePracticeDraftsStore((s) => s.clearDraft);
 
   const [language, setLanguage] = useState<PracticeLanguage>(defaultLanguage);
   const [answer, setAnswer] = useState("");
+  const [stdin, setStdin] = useState("");
+  const [runResult, setRunResult] = useState<RunCodeResult | null>(null);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [evaluation, setEvaluation] = useState<{
     score_correctness: number;
@@ -56,15 +82,57 @@ export default function PracticeQuestionPage() {
     setLanguage(defaultLanguage);
   }, [defaultLanguage]);
 
+  const loadKey = `${questionId}:${language}`;
+
   useEffect(() => {
-    if (!question.data) return;
-    setAnswer(getStarterCode(question.data, language));
-  }, [question.data, language]);
+    if (!question.data || loadedKey === loadKey) return;
+
+    const draft = getDraft(questionId, language);
+    if (draft) {
+      setAnswer(draft.code);
+      setStdin(draft.stdin);
+      setRunResult(null);
+      setLoadedKey(loadKey);
+      return;
+    }
+
+    if (attempts.isLoading) return;
+
+    const previous = latestAttemptForLanguage(attempts.data?.attempts, language);
+    setAnswer(
+      previous?.submitted_content ??
+        getStarterCode(question.data, language),
+    );
+    setStdin("");
+    setRunResult(null);
+    setLoadedKey(loadKey);
+  }, [
+    question.data,
+    language,
+    questionId,
+    attempts.data,
+    attempts.isLoading,
+    loadedKey,
+    loadKey,
+    getDraft,
+  ]);
+
+  useEffect(() => {
+    if (!question.data || evaluation) return;
+    setDraft(questionId, language, { code: answer, stdin });
+  }, [answer, stdin, questionId, language, question.data, evaluation, setDraft]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  function handleRun() {
+    runCode.mutate(
+      { language, code: answer, stdin: stdin || undefined },
+      { onSuccess: setRunResult },
+    );
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -79,6 +147,7 @@ export default function PracticeQuestionPage() {
       },
       {
         onSuccess: (attempt) => {
+          clearDraft(questionId, language);
           evaluateAttempt.mutate(attempt.id, {
             onSuccess: (ev) => {
               setEvaluation(ev);
@@ -128,7 +197,7 @@ export default function PracticeQuestionPage() {
     <>
       <TopBar
         title={q.title}
-        subtitle="Submit your solution and request AI evaluation."
+        subtitle="Run locally to debug, then submit for OpenAI evaluation."
         actions={
           <div className="flex items-center gap-2">
             <Badge tone="info">{formatCategory(q.type)}</Badge>
@@ -153,7 +222,7 @@ export default function PracticeQuestionPage() {
         </Card>
 
         <Card title="Your answer">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             {!isConcept && (
               <LanguageSelect
                 value={language}
@@ -171,21 +240,73 @@ export default function PracticeQuestionPage() {
               minHeight={isConcept ? "16rem" : "20rem"}
             />
 
+            {!isConcept && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Stdin (optional)
+                </label>
+                <textarea
+                  value={stdin}
+                  onChange={(e) => setStdin(e.target.value)}
+                  disabled={readOnly}
+                  rows={2}
+                  placeholder="Input passed to your program on stdin"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+            )}
+
+            {!isConcept && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Run output
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleRun}
+                    loading={runCode.isPending}
+                    disabled={readOnly}
+                  >
+                    Run
+                  </Button>
+                </div>
+                <RunOutput result={runResult} loading={runCode.isPending} />
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {!evaluation && (
+        <Card title="Submit for AI evaluation" className="mt-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              {isConcept
+                ? "When your answer is ready, submit it for OpenAI feedback."
+                : "Run and debug your code first. Submit only when you are ready for AI scoring."}
+            </p>
             <Button
               type="submit"
+              className="shrink-0 self-start sm:self-center"
               loading={submitAttempt.isPending || evaluateAttempt.isPending}
               disabled={readOnly}
             >
               Submit & evaluate
             </Button>
-            {evaluation && (
-              <Button variant="secondary" href="/">
-                Back to dashboard
-              </Button>
-            )}
           </form>
         </Card>
-      </div>
+      )}
+
+      {evaluation && (
+        <div className="mt-4 flex justify-end">
+          <Button variant="secondary" href="/">
+            Back to dashboard
+          </Button>
+        </div>
+      )}
 
       {evaluation && (
         <Card title="AI feedback" className="mt-4">

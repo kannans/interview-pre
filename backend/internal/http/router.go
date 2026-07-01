@@ -12,6 +12,7 @@ import (
 	"github.com/kannans/interview-prep/backend/internal/db"
 	"github.com/kannans/interview-prep/backend/internal/http/handler"
 	"github.com/kannans/interview-prep/backend/internal/repository"
+	"github.com/kannans/interview-prep/backend/internal/runner"
 	"github.com/kannans/interview-prep/backend/internal/service"
 )
 
@@ -66,6 +67,9 @@ func NewRouter(dbPool *pgxpool.Pool, aiService ai.Service) *chi.Mux {
 	progressSvc := service.NewProgressService(profileRepo, planRepo, progressRepo, aiService)
 	progressHandler := handler.NewProgressHandler(progressSvc)
 
+	runSvc := service.NewRunService(runner.NewLocalExecutor())
+	runHandler := handler.NewRunHandler(runSvc)
+
 	r.Get("/health", healthHandler.Check)
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -82,6 +86,8 @@ func NewRouter(dbPool *pgxpool.Pool, aiService ai.Service) *chi.Mux {
 
 		r.Get("/questions", questionHandler.List)
 		r.Get("/questions/{id}", questionHandler.Get)
+
+		r.Post("/run", runHandler.Run)
 
 		r.Post("/attempts", attemptHandler.Submit)
 		r.Get("/attempts", attemptHandler.List)
