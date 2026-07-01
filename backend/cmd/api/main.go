@@ -63,7 +63,7 @@ func main() {
 	aiService := ai.NewService(openaiClient, promptRegistry)
 
 	// 4. Set up HTTP router & server
-	router := internalHttp.NewRouter(dbPool, aiService)
+	router := internalHttp.NewRouter(dbPool, aiService, cfg.CORSAllowedOrigins)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

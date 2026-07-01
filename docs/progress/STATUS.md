@@ -1,6 +1,6 @@
 # Interview Preparation Coach — Build Status
 
-**Last updated:** 2026-06-30  
+**Last updated:** 2026-07-01  
 **Core loop:** profile → diagnosis → plan → practice → evaluate → progress → adjust
 
 ## Summary
@@ -15,7 +15,7 @@ Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (
 |-------|------|--------|
 | 1 | Freeze MVP scope | Done |
 | 2 | Technical architecture | Done |
-| 3 | Folder structure | Partial — `backend/`, `db/`, `frontend/`; no `deploy/` |
+| 3 | Folder structure | Done — `backend/`, `db/`, `frontend/`, `deploy/` |
 | 4 | PostgreSQL schema & migrations | Done |
 | 5 | Go backend foundation | Done |
 | 6 | Backend product modules | Done (7/7) |
@@ -23,7 +23,7 @@ Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (
 | 8 | Next.js frontend | Done |
 | 9 | End-to-end recovery loop | Done |
 | 10 | Testing & review | Done (automated); manual QA pending |
-| 11 | EC2 / Docker deployment | Not started |
+| 11 | EC2 / Docker deployment | Done |
 | 12 | 30-day personal validation plan | Not started |
 | 13 | Measurable recovery (failure patterns + velocity) | Not started |
 | 14 | Pressure mode + proactive adjust + mock interview | Not started |
@@ -46,6 +46,7 @@ Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (
 - [x] Next.js frontend: all app pages, API client + React Query, shared UI, AI error handling
 - [x] End-to-end workflow: diagnosis → plan generation, recommended practice deep-links, post-evaluate snapshot + task completion, workflow stage routing (practice / progress / adjust)
 - [x] Loop review fixes: status codes, cache invalidation, workflow stage precedence, error handling (see [REVIEW.md](./REVIEW.md))
+- [x] Docker deployment: `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`, `.env.example`, Nginx config, README deploy section
 
 ## Backend modules
 
@@ -102,7 +103,7 @@ Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (
 - [ ] Manual end-to-end QA (checklist in [REVIEW.md](./REVIEW.md))
 - [ ] Mock interview backend endpoints (prompts exist; service stubs only)
 - [ ] Integration tests against real PostgreSQL (optional CI job)
-- [ ] Deployment (Dockerfiles, docker-compose, EC2)
+- [ ] Phase 12 — 30-day personal validation playbook
 
 ## Testing
 
@@ -121,7 +122,6 @@ cd frontend && npm run build
 ## Blockers
 
 - **Manual QA not run** — automated tests pass; live walkthrough still needed ([REVIEW.md](./REVIEW.md) checklist)
-- **No deployment artifacts** — Phase 11 not started
 
 ## Repo layout notes
 
@@ -129,12 +129,11 @@ cd frontend && npm run build
 - `backend/internal/db/` — generated sqlc code + pgx connection pool
 - `backend/internal/ai/prompts/` — versioned prompt JSON documents
 - `frontend/src/` — Next.js app, API client, hooks, UI components
+- `deploy/nginx/` — optional EC2 reverse proxy config
 - `docs/progress/` — build status, review notes, and next-step prompts
 
 ## Recommended next step
 
-Run manual QA, then proceed to **Phase 11 — deployment**. See [NEXT.md](./NEXT.md) for the copy-paste prompt.
+**Phase 12 — 30-day personal validation.** Copy-paste prompt in [NEXT.md](./NEXT.md).
 
-Post-MVP product direction (failure patterns, recovery velocity, pressure mode, proactive adjust): [Innovation Plan](../product/interview-preparation-app-innovation-plan.md).
-
-Implementation copy-paste prompts for Phases 11–16: [Master Implementation Prompts](../prompts/interview-preparation-app-master-implementation-prompts.md).
+Post-MVP direction: [Innovation Plan](../product/interview-preparation-app-innovation-plan.md) · All prompts: [Master Implementation Prompts](../prompts/interview-preparation-app-master-implementation-prompts.md).

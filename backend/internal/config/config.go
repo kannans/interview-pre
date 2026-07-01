@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port         string
-	Env          string
-	DatabaseURL  string
-	OpenAIAPIKey string
-	OpenAIModel  string
+	Port               string
+	Env                string
+	DatabaseURL        string
+	OpenAIAPIKey       string
+	OpenAIModel        string
+	CORSAllowedOrigins []string
 }
 
 func Load() (*Config, error) {
@@ -48,10 +50,31 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Port:         port,
-		Env:          env,
-		DatabaseURL:  databaseURL,
-		OpenAIAPIKey: openaiAPIKey,
-		OpenAIModel:  openaiModel,
+		Port:               port,
+		Env:                env,
+		DatabaseURL:        databaseURL,
+		OpenAIAPIKey:       openaiAPIKey,
+		OpenAIModel:        openaiModel,
+		CORSAllowedOrigins: parseCORSAllowedOrigins(),
 	}, nil
+}
+
+// parseCORSAllowedOrigins reads CORS_ALLOWED_ORIGINS (comma-separated). Defaults to local Next.js dev.
+func parseCORSAllowedOrigins() []string {
+	raw := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if raw == "" {
+		return []string{"http://localhost:3000", "http://127.0.0.1:3000"}
+	}
+
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if origin := strings.TrimSpace(part); origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	if len(origins) == 0 {
+		return []string{"http://localhost:3000", "http://127.0.0.1:3000"}
+	}
+	return origins
 }

@@ -16,7 +16,7 @@ import (
 	"github.com/kannans/interview-prep/backend/internal/service"
 )
 
-func NewRouter(dbPool *pgxpool.Pool, aiService ai.Service) *chi.Mux {
+func NewRouter(dbPool *pgxpool.Pool, aiService ai.Service, corsAllowedOrigins []string) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global Middlewares
@@ -27,8 +27,11 @@ func NewRouter(dbPool *pgxpool.Pool, aiService ai.Service) *chi.Mux {
 	r.Use(middleware.Timeout(120 * time.Second))
 
 	// CORS Setup
+	if len(corsAllowedOrigins) == 0 {
+		corsAllowedOrigins = []string{"http://localhost:3000", "http://127.0.0.1:3000"}
+	}
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000"},
+		AllowedOrigins:   corsAllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
