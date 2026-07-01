@@ -7,14 +7,16 @@ type RunOutputProps = {
   result: RunCodeResult | null;
   loading?: boolean;
   className?: string;
+  compact?: boolean;
 };
 
-export function RunOutput({ result, loading, className }: RunOutputProps) {
+export function RunOutput({ result, loading, className, compact }: RunOutputProps) {
   if (loading) {
     return (
       <div
         className={clsx(
           "rounded-lg border border-zinc-300 bg-zinc-950 p-3 font-mono text-sm text-zinc-300 dark:border-zinc-700",
+          compact && "min-h-[5rem]",
           className,
         )}
       >
@@ -28,10 +30,11 @@ export function RunOutput({ result, loading, className }: RunOutputProps) {
       <div
         className={clsx(
           "rounded-lg border border-dashed border-zinc-300 p-3 text-sm text-zinc-500 dark:border-zinc-700",
+          compact && "min-h-[5rem]",
           className,
         )}
       >
-        Add print/console.log calls to test your code, then click Run.
+        Add print/console.log calls, then click Run.
       </div>
     );
   }

@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { CodeEditor } from "@/components/practice/CodeEditor";
-import { LanguageSelect } from "@/components/practice/LanguageSelect";
-import { RunOutput } from "@/components/practice/RunOutput";
+import { PracticeSubmitBar } from "@/components/practice/PracticeSubmitBar";
+import { PracticeWorkspace } from "@/components/practice/PracticeWorkspace";
 import {
   useEvaluateAttempt,
   useAttempts,
@@ -19,7 +19,7 @@ import {
   useSubmitAttempt,
 } from "@/hooks/usePractice";
 import { useCompleteTask, useTodayTask } from "@/hooks/usePlan";
-import { usePracticeDraftsStore } from "@/lib/store/practice-drafts";
+import { usePracticeDraftsStore, usePracticeDraftsHydrated } from "@/lib/store/practice-drafts";
 import { useSettingsStore } from "@/lib/store/settings";
 import { formatCategory, formatLevel } from "@/lib/utils/format";
 import { isApiError } from "@/lib/api";
@@ -60,6 +60,7 @@ export default function PracticeQuestionPage() {
   const getDraft = usePracticeDraftsStore((s) => s.getDraft);
   const setDraft = usePracticeDraftsStore((s) => s.setDraft);
   const clearDraft = usePracticeDraftsStore((s) => s.clearDraft);
+  const draftsHydrated = usePracticeDraftsHydrated();
 
   const [language, setLanguage] = useState<PracticeLanguage>(defaultLanguage);
   const [answer, setAnswer] = useState("");
@@ -78,14 +79,23 @@ export default function PracticeQuestionPage() {
     feedback_communication: string;
   } | null>(null);
 
+  const loadKey = `${questionId}:${language}`;
+  const draftReady = loadedKey === loadKey && !evaluation;
+  const contentReady = loadedKey === loadKey;
+
   useEffect(() => {
     setLanguage(defaultLanguage);
   }, [defaultLanguage]);
 
-  const loadKey = `${questionId}:${language}`;
+  useEffect(() => {
+    setLoadedKey(null);
+    setRunResult(null);
+    setAnswer("");
+    setStdin("");
+  }, [questionId]);
 
   useEffect(() => {
-    if (!question.data || loadedKey === loadKey) return;
+    if (!question.data || !draftsHydrated || loadedKey === loadKey) return;
 
     const draft = getDraft(questionId, language);
     if (draft) {
@@ -115,12 +125,23 @@ export default function PracticeQuestionPage() {
     loadedKey,
     loadKey,
     getDraft,
+    draftsHydrated,
   ]);
 
   useEffect(() => {
-    if (!question.data || evaluation) return;
+    if (!question.data || evaluation || loadedKey !== loadKey) return;
     setDraft(questionId, language, { code: answer, stdin });
-  }, [answer, stdin, questionId, language, question.data, evaluation, setDraft]);
+  }, [
+    answer,
+    stdin,
+    questionId,
+    language,
+    question.data,
+    evaluation,
+    loadedKey,
+    loadKey,
+    setDraft,
+  ]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setElapsed((s) => s + 1), 1000);
@@ -128,6 +149,7 @@ export default function PracticeQuestionPage() {
   }, []);
 
   function handleRun() {
+    setRunResult(null);
     runCode.mutate(
       { language, code: answer, stdin: stdin || undefined },
       { onSuccess: setRunResult },
@@ -172,7 +194,7 @@ export default function PracticeQuestionPage() {
     );
   }
 
-  if (question.isLoading) {
+  if (question.isLoading || !draftsHydrated) {
     return <LoadingSpinner label="Loading question…" />;
   }
 
@@ -192,6 +214,7 @@ export default function PracticeQuestionPage() {
   const isConcept = q.type === "concept";
   const editorLanguage = isConcept ? "markdown" : monacoLanguageId(language);
   const readOnly = !!evaluation;
+  const submitLoading = submitAttempt.isPending || evaluateAttempt.isPending;
 
   return (
     <>
@@ -209,8 +232,11 @@ export default function PracticeQuestionPage() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Problem">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] lg:items-start">
+        <Card
+          title="Problem"
+          className="lg:sticky lg:top-4"
+        >
           <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
             {q.content}
           </p>
@@ -221,83 +247,57 @@ export default function PracticeQuestionPage() {
           )}
         </Card>
 
-        <Card title="Your answer">
-          <div className="space-y-4">
-            {!isConcept && (
-              <LanguageSelect
-                value={language}
-                onChange={setLanguage}
-                disabled={readOnly}
-              />
-            )}
-
-            <CodeEditor
-              value={answer}
-              onChange={setAnswer}
-              language={language}
-              editorLanguage={editorLanguage}
-              readOnly={readOnly}
-              minHeight={isConcept ? "16rem" : "20rem"}
-            />
-
-            {!isConcept && (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Stdin (optional)
-                </label>
-                <textarea
-                  value={stdin}
-                  onChange={(e) => setStdin(e.target.value)}
-                  disabled={readOnly}
-                  rows={2}
-                  placeholder="Input passed to your program on stdin"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+        {isConcept ? (
+          contentReady ? (
+            <Card title="Your answer">
+              <div className="space-y-4">
+                <CodeEditor
+                  value={answer}
+                  onChange={setAnswer}
+                  language={language}
+                  editorLanguage={editorLanguage}
+                  readOnly={readOnly}
+                  minHeight="20rem"
                 />
+                {draftReady && !readOnly && (
+                  <p className="text-xs text-zinc-500">Draft saved locally</p>
+                )}
               </div>
-            )}
-
-            {!isConcept && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Run output
-                  </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleRun}
-                    loading={runCode.isPending}
-                    disabled={readOnly}
-                  >
-                    Run
-                  </Button>
-                </div>
-                <RunOutput result={runResult} loading={runCode.isPending} />
-              </div>
-            )}
+            </Card>
+          ) : (
+            <Card title="Your answer">
+              <LoadingSpinner label="Loading workspace…" />
+            </Card>
+          )
+        ) : contentReady ? (
+          <PracticeWorkspace
+            language={language}
+            onLanguageChange={setLanguage}
+            editorLanguage={editorLanguage}
+            answer={answer}
+            onAnswerChange={setAnswer}
+            stdin={stdin}
+            onStdinChange={setStdin}
+            runResult={runResult}
+            runPending={runCode.isPending}
+            onRun={handleRun}
+            readOnly={readOnly}
+            draftReady={draftReady}
+          />
+        ) : (
+          <div className="flex min-h-[36rem] items-center justify-center rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            <LoadingSpinner label="Loading workspace…" />
           </div>
-        </Card>
+        )}
       </div>
 
       {!evaluation && (
-        <Card title="Submit for AI evaluation" className="mt-4">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {isConcept
-                ? "When your answer is ready, submit it for OpenAI feedback."
-                : "Run and debug your code first. Submit only when you are ready for AI scoring."}
-            </p>
-            <Button
-              type="submit"
-              className="shrink-0 self-start sm:self-center"
-              loading={submitAttempt.isPending || evaluateAttempt.isPending}
-              disabled={readOnly}
-            >
-              Submit & evaluate
-            </Button>
-          </form>
-        </Card>
+        <PracticeSubmitBar
+          isConcept={isConcept}
+          loading={submitLoading}
+          disabled={readOnly}
+          onSubmit={handleSubmit}
+        />
       )}
 
       {evaluation && (

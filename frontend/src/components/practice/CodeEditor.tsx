@@ -22,6 +22,9 @@ type CodeEditorProps = {
   language: PracticeLanguage;
   editorLanguage?: string;
   readOnly?: boolean;
+  /** CSS height for the editor surface, e.g. "320px" or "20rem". */
+  height?: string;
+  /** @deprecated Use `height` instead. */
   minHeight?: string;
 };
 
@@ -31,15 +34,17 @@ export function CodeEditor({
   language,
   editorLanguage,
   readOnly = false,
+  height,
   minHeight = "20rem",
 }: CodeEditorProps) {
   const theme = useTheme();
   const monacoLang = editorLanguage ?? monacoLanguageId(language);
+  const editorHeight = height ?? minHeight;
 
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-300 dark:border-zinc-700">
       <MonacoEditor
-        height={minHeight}
+        height={editorHeight}
         language={monacoLang}
         value={value}
         theme={theme === "dark" ? "vs-dark" : "light"}
