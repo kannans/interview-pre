@@ -25,6 +25,10 @@ Backend (Phases 5–7), Next.js frontend (Phase 8), end-to-end workflow wiring (
 | 10 | Testing & review | Done (automated); manual QA pending |
 | 11 | EC2 / Docker deployment | Not started |
 | 12 | 30-day personal validation plan | Not started |
+| 13 | Measurable recovery (failure patterns + velocity) | Not started |
+| 14 | Pressure mode + proactive adjust + mock interview | Not started |
+| 15 | Briefing + debrief + micro-drills | Not started |
+| 16 | Company readiness lens + platform (conditional) | Not started |
 
 ## Done
 
@@ -130,3 +134,7 @@ cd frontend && npm run build
 ## Recommended next step
 
 Run manual QA, then proceed to **Phase 11 — deployment**. See [NEXT.md](./NEXT.md) for the copy-paste prompt.
+
+Post-MVP product direction (failure patterns, recovery velocity, pressure mode, proactive adjust): [Innovation Plan](../product/interview-preparation-app-innovation-plan.md).
+
+Implementation copy-paste prompts for Phases 11–16: [Master Implementation Prompts](../prompts/interview-preparation-app-master-implementation-prompts.md).

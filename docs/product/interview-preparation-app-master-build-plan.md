@@ -25,6 +25,8 @@ Use these docs as the source of truth while building:
 - [Roadmap](/Users/kannans/Documents/Codex/2026-06-26/codex-security-plugin-codex-security-openai/outputs/docs/product/interview-preparation-app-roadmap.md)
 - [Master Implementation Prompts](/Users/kannans/Documents/Codex/2026-06-26/codex-security-plugin-codex-security-openai/outputs/docs/prompts/interview-preparation-app-master-implementation-prompts.md)
 - [Master Strategy](/Users/kannans/Documents/Codex/2026-06-26/codex-security-plugin-codex-security-openai/outputs/docs/strategy/interview-preparation-app-master-strategy.md)
+- [Innovation Plan](./interview-preparation-app-innovation-plan.md) — post-MVP differentiation and recovery system features (Phases 13–16)
+- [Master Implementation Prompts](../prompts/interview-preparation-app-master-implementation-prompts.md) — copy-paste prompts for all phases including 11–16
 
 ## Product Direction
 
@@ -376,3 +378,5 @@ Only after it helps you personally should it grow into a product for others and 
 The product should start with this loop:
 
 `profile -> diagnosis -> plan -> practice -> evaluate -> progress -> adjust`
+
+After Phases 11–12 (deploy + personal validation), follow the [Innovation Plan](./interview-preparation-app-innovation-plan.md) to evolve from MVP loop into a measurable recovery system.

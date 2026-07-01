@@ -35,11 +35,14 @@ Return:
 
 ## After deployment
 
-Phase 11 ships the stack. Proceed to **Phase 12 — 30-day personal validation plan** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md`:
+Phase 11 ships the stack. Proceed to **Phase 12 — 30-day personal validation** per `docs/prompts/interview-preparation-app-master-implementation-prompts.md` (Phase 12 prompt).
+
+After Phase 12 validation passes, continue with **Phases 13–16** (measurable recovery → pressure/coaching → real-world closure → strategic expansion) using the same prompts file and [Innovation Plan](../product/interview-preparation-app-innovation-plan.md).
 
 1. Use the app daily for real interview prep
 2. Log friction, AI quality issues, and missing features
 3. Decide what to cut or improve post-MVP
+4. Gate Phase 13 on honest validation — do not build innovation features before daily use proves the loop works
 
 ## Local dev (frontend + backend)
 

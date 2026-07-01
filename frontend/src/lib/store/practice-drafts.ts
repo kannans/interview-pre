@@ -2,13 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import type { PracticeLanguage } from "@/lib/practice/languages";
 import {
   isMeaningfulDraft,
   practiceDraftKey,
   type PracticeDraft,
 } from "./practice-draft-utils";
+
+function practiceDraftsStorage(): StateStorage {
+  if (typeof window === "undefined") {
+    return {
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+    };
+  }
+  return window.localStorage;
+}
 
 type PracticeDraftsState = {
   drafts: Record<string, PracticeDraft>;
@@ -60,6 +71,8 @@ export const usePracticeDraftsStore = create<PracticeDraftsState>()(
     }),
     {
       name: "ipc-practice-drafts",
+      storage: createJSONStorage(practiceDraftsStorage),
+      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (!state?.drafts) return;
         const cleaned: Record<string, PracticeDraft> = {};
@@ -74,17 +87,24 @@ export const usePracticeDraftsStore = create<PracticeDraftsState>()(
 
 /** Wait for localStorage rehydration before reading drafts. */
 export function usePracticeDraftsHydrated() {
-  const [hydrated, setHydrated] = useState(
-    () => usePracticeDraftsStore.persist.hasHydrated(),
-  );
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const unsub = usePracticeDraftsStore.persist.onFinishHydration(() => {
+    const persistApi = usePracticeDraftsStore.persist;
+    if (!persistApi) {
       setHydrated(true);
-    });
-    if (usePracticeDraftsStore.persist.hasHydrated()) {
-      setHydrated(true);
+      return;
     }
+
+    const markHydrated = () => setHydrated(true);
+
+    if (persistApi.hasHydrated()) {
+      markHydrated();
+      return;
+    }
+
+    const unsub = persistApi.onFinishHydration(markHydrated);
+    void persistApi.rehydrate();
     return unsub;
   }, []);
 
